@@ -16,3 +16,11 @@ export interface Station extends LatLon {
   /** Transport modes served, e.g. ["tube", "dlr"] */
   modes: string[]
 }
+
+export interface WalkingRoute {
+  stationId: string
+  /** Walking time in minutes */
+  durationMinutes: number
+  /** Route polyline as [lat, lon] pairs */
+  path: [number, number][]
+}

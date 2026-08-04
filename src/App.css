@@ -95,11 +95,39 @@
   padding: 0;
 }
 
-.station-item {
-  padding: 10px 12px;
+.station-list li {
   margin-bottom: 6px;
+}
+
+.station-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  text-align: left;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
+  cursor: pointer;
+}
+
+.station-item:hover {
+  border-color: var(--accent);
+}
+
+.station-item.selected {
+  border-color: #d4351c;
+  background: rgba(212, 53, 28, 0.06);
+}
+
+.loading-routes {
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.station-walk-time {
+  font-weight: 600;
+  color: var(--text-h);
 }
 
 .station-name {

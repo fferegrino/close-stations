@@ -3,14 +3,17 @@ import AddressSearch from './components/AddressSearch'
 import StationList from './components/StationList'
 import MapView from './components/MapView'
 import { geocodeAddress } from './api/geocode'
-import { findNearbyStations } from './api/tfl'
-import type { GeocodedAddress, Station } from './types'
+import { findNearbyStations, getWalkingRoutes } from './api/tfl'
+import type { GeocodedAddress, Station, WalkingRoute } from './types'
 import './App.css'
 
 function App() {
   const [origin, setOrigin] = useState<GeocodedAddress | null>(null)
   const [stations, setStations] = useState<Station[]>([])
+  const [routes, setRoutes] = useState<Map<string, WalkingRoute>>(new Map())
+  const [selectedStationId, setSelectedStationId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingRoutes, setLoadingRoutes] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSearch(address: string) {
@@ -18,6 +21,8 @@ function App() {
     setError(null)
     setOrigin(null)
     setStations([])
+    setRoutes(new Map())
+    setSelectedStationId(null)
     try {
       const result = await geocodeAddress(address)
       if (!result) {
@@ -30,6 +35,14 @@ function App() {
       setStations(nearby)
       if (nearby.length === 0) {
         setError('No stations found within 1.5 miles of that address.')
+        return
+      }
+
+      setLoadingRoutes(true)
+      try {
+        setRoutes(await getWalkingRoutes(result, nearby))
+      } finally {
+        setLoadingRoutes(false)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.')
@@ -51,10 +64,22 @@ function App() {
           {error && <p className="error">{error}</p>}
           {origin && <p className="origin-name">{origin.displayName}</p>}
         </header>
-        <StationList stations={stations} />
+        <StationList
+          stations={stations}
+          routes={routes}
+          loadingRoutes={loadingRoutes}
+          selectedStationId={selectedStationId}
+          onSelect={setSelectedStationId}
+        />
       </aside>
       <main className="map-area">
-        <MapView origin={origin} stations={stations} />
+        <MapView
+          origin={origin}
+          stations={stations}
+          routes={routes}
+          selectedStationId={selectedStationId}
+          onSelectStation={setSelectedStationId}
+        />
       </main>
     </div>
   )
