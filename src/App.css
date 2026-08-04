@@ -28,6 +28,56 @@
 .tagline {
   font-size: 14px;
   color: var(--text);
+  margin-bottom: 14px;
+}
+
+.address-search {
+  display: flex;
+  gap: 8px;
+}
+
+.address-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-h);
+}
+
+.address-search input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.address-search button {
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.address-search button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.error {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #c0392b;
+}
+
+.origin-name {
+  margin-top: 10px;
+  font-size: 13px;
 }
 
 .map-area {
