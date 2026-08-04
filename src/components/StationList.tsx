@@ -1,4 +1,4 @@
-import { metresToMiles } from '../api/tfl'
+import { MAX_ROUTES, metresToMiles } from '../api/tfl'
 import type { Station, WalkingRoute } from '../types'
 
 interface StationListProps {
@@ -23,7 +23,15 @@ export default function StationList({
       <h2>
         {stations.length} station{stations.length === 1 ? '' : 's'} within 1.5 miles
       </h2>
-      {loadingRoutes && <p className="loading-routes">Fetching walking routes…</p>}
+      {loadingRoutes ? (
+        <p className="loading-routes">Fetching walking routes…</p>
+      ) : (
+        stations.length > MAX_ROUTES && (
+          <p className="routes-note">
+            Walking routes shown for the {MAX_ROUTES} nearest stations.
+          </p>
+        )
+      )}
       <ul>
         {stations.map((station) => {
           const route = routes.get(station.id)

@@ -62,8 +62,21 @@ function App() {
           </p>
           <AddressSearch onSearch={handleSearch} loading={loading} />
           {error && <p className="error">{error}</p>}
+          {loading && !error && (
+            <p className="status">
+              {origin ? 'Finding nearby stations…' : 'Looking up address…'}
+            </p>
+          )}
           {origin && <p className="origin-name">{origin.displayName}</p>}
         </header>
+        {!origin && !loading && !error && (
+          <div className="empty-state">
+            <p>
+              Search for a London address above to see nearby Tube and rail
+              stations and the walking route to each one.
+            </p>
+          </div>
+        )}
         <StationList
           stations={stations}
           routes={routes}

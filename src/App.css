@@ -80,6 +80,23 @@
   font-size: 13px;
 }
 
+.status {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.empty-state {
+  padding: 20px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.routes-note {
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
 .station-list {
   padding: 16px 20px;
 }
@@ -128,6 +145,23 @@
 .station-walk-time {
   font-weight: 600;
   color: var(--text-h);
+}
+
+@media (max-width: 720px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-height: 45vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .map-area {
+    min-height: 0;
+  }
 }
 
 .station-name {
