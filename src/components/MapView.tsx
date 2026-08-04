@@ -14,6 +14,7 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
 import { metresToMiles } from '../api/tfl'
+import { lineColor, lineTextColor } from '../lineColors'
 import type { GeocodedAddress, Station, WalkingRoute } from '../types'
 
 // Vite bundling breaks Leaflet's default icon URL resolution
@@ -128,6 +129,20 @@ export default function MapView({
                   {route.durationMinutes} min walk
                 </>
               )}
+              <span className="popup-lines">
+                {station.lines.map((line) => (
+                  <span
+                    key={line.id}
+                    className="line-badge"
+                    style={{
+                      background: lineColor(line.id),
+                      color: lineTextColor(line.id),
+                    }}
+                  >
+                    {line.name}
+                  </span>
+                ))}
+              </span>
             </Popup>
           </CircleMarker>
         )

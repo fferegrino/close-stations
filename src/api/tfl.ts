@@ -15,6 +15,7 @@ interface TflStopPoint {
   lat: number
   lon: number
   modes: string[]
+  lines: Array<{ id: string; name: string }>
 }
 
 /**
@@ -44,6 +45,7 @@ export async function findNearbyStations(origin: LatLon): Promise<Station[]> {
       lat: sp.lat,
       lon: sp.lon,
       modes: sp.modes,
+      lines: (sp.lines ?? []).map(({ id, name }) => ({ id, name })),
     }))
     .sort((a, b) => a.distanceMetres - b.distanceMetres)
 }

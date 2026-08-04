@@ -182,13 +182,27 @@
   color: var(--text);
 }
 
-.mode-badge {
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--accent-bg);
-  color: var(--accent);
+.station-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.line-badge {
+  padding: 1px 8px;
+  border-radius: 3px;
+  font-size: 11px;
   font-weight: 600;
-  text-transform: capitalize;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.popup-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
 }
 
 .map-area {

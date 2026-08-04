@@ -1,4 +1,5 @@
 import { MAX_ROUTES, metresToMiles } from '../api/tfl'
+import { lineColor, lineTextColor } from '../lineColors'
 import type { Station, WalkingRoute } from '../types'
 
 interface StationListProps {
@@ -53,9 +54,18 @@ export default function StationList({
                       {route.durationMinutes} min walk
                     </span>
                   )}
-                  {station.modes.map((mode) => (
-                    <span key={mode} className={`mode-badge mode-${mode}`}>
-                      {mode}
+                </div>
+                <div className="station-lines">
+                  {station.lines.map((line) => (
+                    <span
+                      key={line.id}
+                      className="line-badge"
+                      style={{
+                        background: lineColor(line.id),
+                        color: lineTextColor(line.id),
+                      }}
+                    >
+                      {line.name}
                     </span>
                   ))}
                 </div>

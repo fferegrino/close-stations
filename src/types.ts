@@ -8,6 +8,12 @@ export interface GeocodedAddress extends LatLon {
   displayName: string
 }
 
+export interface StationLine {
+  /** TfL line id, e.g. "circle", "windrush", "southeastern" */
+  id: string
+  name: string
+}
+
 export interface Station extends LatLon {
   id: string
   name: string
@@ -15,6 +21,8 @@ export interface Station extends LatLon {
   distanceMetres: number
   /** Transport modes served, e.g. ["tube", "dlr"] */
   modes: string[]
+  /** Lines serving this station */
+  lines: StationLine[]
 }
 
 export interface WalkingRoute {
