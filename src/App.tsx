@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import AddressSearch from './components/AddressSearch'
+import LineFilter from './components/LineFilter'
 import StationList from './components/StationList'
 import MapView from './components/MapView'
 import { geocodeAddress } from './api/geocode'
@@ -12,6 +13,7 @@ function App() {
   const [stations, setStations] = useState<Station[]>([])
   const [routes, setRoutes] = useState<Map<string, WalkingRoute>>(new Map())
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null)
+  const [activeLineIds, setActiveLineIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [loadingRoutes, setLoadingRoutes] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -23,6 +25,7 @@ function App() {
     setStations([])
     setRoutes(new Map())
     setSelectedStationId(null)
+    setActiveLineIds(new Set())
     try {
       const result = await geocodeAddress(address)
       if (!result) {
@@ -51,6 +54,18 @@ function App() {
     }
   }
 
+  function toggleLine(lineId: string) {
+    setActiveLineIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(lineId)) {
+        next.delete(lineId)
+      } else {
+        next.add(lineId)
+      }
+      return next
+    })
+  }
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -77,11 +92,18 @@ function App() {
             </p>
           </div>
         )}
+        <LineFilter
+          stations={stations}
+          activeLineIds={activeLineIds}
+          onToggle={toggleLine}
+          onClear={() => setActiveLineIds(new Set())}
+        />
         <StationList
           stations={stations}
           routes={routes}
           loadingRoutes={loadingRoutes}
           selectedStationId={selectedStationId}
+          activeLineIds={activeLineIds}
           onSelect={setSelectedStationId}
         />
       </aside>
@@ -91,6 +113,7 @@ function App() {
           stations={stations}
           routes={routes}
           selectedStationId={selectedStationId}
+          activeLineIds={activeLineIds}
           onSelectStation={setSelectedStationId}
         />
       </main>

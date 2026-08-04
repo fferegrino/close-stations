@@ -137,6 +137,66 @@
   background: rgba(212, 53, 28, 0.06);
 }
 
+.station-item.dimmed {
+  opacity: 0.45;
+}
+
+.line-filter {
+  padding: 16px 20px 0;
+}
+
+.line-filter-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.line-filter-header h2 {
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+
+.line-filter-clear {
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.line-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.line-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--bg);
+  border: 1.5px solid;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.line-chip-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.line-chip.active .line-chip-swatch {
+  outline: 1.5px solid rgba(255, 255, 255, 0.8);
+}
+
 .loading-routes {
   font-size: 13px;
   margin-bottom: 10px;

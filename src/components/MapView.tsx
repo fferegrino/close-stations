@@ -57,16 +57,40 @@ interface MapViewProps {
   stations: Station[]
   routes: Map<string, WalkingRoute>
   selectedStationId: string | null
+  activeLineIds: Set<string>
   onSelectStation: (stationId: string | null) => void
 }
+
+const DIMMED_COLOR = '#9ca3af'
 
 export default function MapView({
   origin,
   stations,
   routes,
   selectedStationId,
+  activeLineIds,
   onSelectStation,
 }: MapViewProps) {
+  const stationsById = new Map(stations.map((s) => [s.id, s]))
+
+  /**
+   * Marker/route colour for a station given the active line highlights:
+   * red when selected, the first matching line's colour when highlighted,
+   * grey when filtered out, TfL blue otherwise.
+   */
+  function stationColor(station: Station, selected: boolean): string {
+    if (selected) return '#d4351c'
+    if (activeLineIds.size === 0) return '#1d70b8'
+    const match = station.lines.find((line) => activeLineIds.has(line.id))
+    return match ? lineColor(match.id) : DIMMED_COLOR
+  }
+
+  function isDimmed(station: Station): boolean {
+    return (
+      activeLineIds.size > 0 &&
+      !station.lines.some((line) => activeLineIds.has(line.id))
+    )
+  }
   return (
     <MapContainer
       center={LONDON_CENTER}
@@ -85,14 +109,17 @@ export default function MapView({
       )}
       {[...routes.values()].map((route) => {
         const selected = route.stationId === selectedStationId
+        const station = stationsById.get(route.stationId)
+        const dimmed = station ? isDimmed(station) : false
+        const color = station ? stationColor(station, selected) : '#1d70b8'
         return (
           <Polyline
             key={route.stationId}
             positions={route.path}
             pathOptions={{
-              color: selected ? '#d4351c' : '#1d70b8',
+              color,
               weight: selected ? 5 : 3,
-              opacity: selected ? 0.95 : 0.55,
+              opacity: selected ? 0.95 : dimmed ? 0.2 : 0.6,
               dashArray: selected ? undefined : '6 8',
             }}
             eventHandlers={{
@@ -104,15 +131,16 @@ export default function MapView({
       {stations.map((station) => {
         const route = routes.get(station.id)
         const selected = station.id === selectedStationId
+        const color = stationColor(station, selected)
         return (
           <CircleMarker
             key={station.id}
             center={[station.lat, station.lon]}
             radius={selected ? 10 : 8}
             pathOptions={{
-              color: selected ? '#d4351c' : '#1d70b8',
-              fillColor: selected ? '#d4351c' : '#1d70b8',
-              fillOpacity: 0.8,
+              color,
+              fillColor: color,
+              fillOpacity: isDimmed(station) ? 0.35 : 0.8,
               weight: 2,
             }}
             eventHandlers={{

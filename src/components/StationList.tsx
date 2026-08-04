@@ -7,6 +7,7 @@ interface StationListProps {
   routes: Map<string, WalkingRoute>
   loadingRoutes: boolean
   selectedStationId: string | null
+  activeLineIds: Set<string>
   onSelect: (stationId: string | null) => void
 }
 
@@ -15,6 +16,7 @@ export default function StationList({
   routes,
   loadingRoutes,
   selectedStationId,
+  activeLineIds,
   onSelect,
 }: StationListProps) {
   if (stations.length === 0) return null
@@ -37,11 +39,14 @@ export default function StationList({
         {stations.map((station) => {
           const route = routes.get(station.id)
           const selected = station.id === selectedStationId
+          const dimmed =
+            activeLineIds.size > 0 &&
+            !station.lines.some((line) => activeLineIds.has(line.id))
           return (
             <li key={station.id}>
               <button
                 type="button"
-                className={`station-item${selected ? ' selected' : ''}`}
+                className={`station-item${selected ? ' selected' : ''}${dimmed ? ' dimmed' : ''}`}
                 onClick={() => onSelect(selected ? null : station.id)}
               >
                 <div className="station-name">{station.name}</div>
