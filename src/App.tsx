@@ -1,29 +1,38 @@
 import { useState } from 'react'
 import AddressSearch from './components/AddressSearch'
+import StationList from './components/StationList'
 import MapView from './components/MapView'
 import { geocodeAddress } from './api/geocode'
-import type { GeocodedAddress } from './types'
+import { findNearbyStations } from './api/tfl'
+import type { GeocodedAddress, Station } from './types'
 import './App.css'
 
 function App() {
   const [origin, setOrigin] = useState<GeocodedAddress | null>(null)
+  const [stations, setStations] = useState<Station[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSearch(address: string) {
     setLoading(true)
     setError(null)
+    setOrigin(null)
+    setStations([])
     try {
       const result = await geocodeAddress(address)
       if (!result) {
         setError('Address not found in London. Try being more specific.')
-        setOrigin(null)
         return
       }
       setOrigin(result)
+
+      const nearby = await findNearbyStations(result)
+      setStations(nearby)
+      if (nearby.length === 0) {
+        setError('No stations found within 1.5 miles of that address.')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.')
-      setOrigin(null)
     } finally {
       setLoading(false)
     }
@@ -42,9 +51,10 @@ function App() {
           {error && <p className="error">{error}</p>}
           {origin && <p className="origin-name">{origin.displayName}</p>}
         </header>
+        <StationList stations={stations} />
       </aside>
       <main className="map-area">
-        <MapView origin={origin} />
+        <MapView origin={origin} stations={stations} />
       </main>
     </div>
   )
