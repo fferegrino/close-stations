@@ -44,6 +44,14 @@ npm run build
 npm run preview
 ```
 
+## Deploy (GitHub Pages)
+
+The app is a static Vite build and deploys automatically via GitHub Actions on pushes to `main`.
+
+1. In the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+2. After the first successful workflow run, the site is at:
+   https://fferegrino.github.io/close-stations/
+
 ## Stack
 
 - [Vite](https://vite.dev/) + [React](https://react.dev/) + TypeScript
