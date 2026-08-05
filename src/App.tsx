@@ -123,8 +123,12 @@ function App() {
           enabledLineIds={enabledLineIds}
           loading={loadingNetwork}
           onToggle={toggleLine}
-          onShowAll={() =>
-            setEnabledLineIds(new Set(networkLines.map((line) => line.id)))
+          onToggleAll={(on) =>
+            setEnabledLineIds(
+              on
+                ? new Set(networkLines.map((line) => line.id))
+                : new Set(),
+            )
           }
         />
         {!origin && !loading && !error && (

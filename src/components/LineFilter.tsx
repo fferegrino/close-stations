@@ -6,7 +6,7 @@ interface LineFilterProps {
   enabledLineIds: Set<string>
   loading: boolean
   onToggle: (lineId: string) => void
-  onShowAll: () => void
+  onToggleAll: (on: boolean) => void
 }
 
 export default function LineFilter({
@@ -14,7 +14,7 @@ export default function LineFilter({
   enabledLineIds,
   loading,
   onToggle,
-  onShowAll,
+  onToggleAll,
 }: LineFilterProps) {
   if (loading && lines.length === 0) {
     return (
@@ -28,20 +28,31 @@ export default function LineFilter({
   if (lines.length === 0) return null
 
   const allOn = lines.every((line) => enabledLineIds.has(line.id))
+  const anyOn = lines.some((line) => enabledLineIds.has(line.id))
+  // Master switch is on when every line is on; off otherwise (partial counts as off)
+  const masterOn = allOn
 
   return (
     <div className="line-filter">
       <div className="line-filter-header">
         <h2>Lines</h2>
-        {!allOn && (
-          <button type="button" className="line-filter-clear" onClick={onShowAll}>
-            Show all
-          </button>
-        )}
       </div>
+      <button
+        type="button"
+        className={`line-switch line-switch-master${masterOn ? ' on' : ''}${anyOn && !allOn ? ' partial' : ''}`}
+        role="switch"
+        aria-checked={masterOn}
+        aria-label="Show all network lines"
+        onClick={() => onToggleAll(!masterOn)}
+      >
+        <span className="line-switch-track">
+          <span className="line-switch-thumb" />
+        </span>
+        Show network lines
+      </button>
       <p className="line-filter-hint">
-        Tube, Overground, DLR, Elizabeth and Tram routes. Toggle a line off to
-        hide it.
+        Tube, Overground, DLR, Elizabeth and Tram routes. Toggle individual
+        lines below, or use the switch above for all at once.
       </p>
       <div className="line-filter-chips">
         {lines.map((line) => {
