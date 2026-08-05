@@ -7,8 +7,6 @@ interface StationListProps {
   routes: Map<string, WalkingRoute>
   loadingRoutes: boolean
   selectedStationId: string | null
-  enabledLineIds: Set<string>
-  networkLineIds: Set<string>
   onSelect: (stationId: string | null) => void
 }
 
@@ -17,8 +15,6 @@ export default function StationList({
   routes,
   loadingRoutes,
   selectedStationId,
-  enabledLineIds,
-  networkLineIds,
   onSelect,
 }: StationListProps) {
   if (stations.length === 0) return null
@@ -41,17 +37,11 @@ export default function StationList({
         {stations.map((station) => {
           const route = routes.get(station.id)
           const selected = station.id === selectedStationId
-          const networkServed = station.lines.filter((line) =>
-            networkLineIds.has(line.id),
-          )
-          const dimmed =
-            networkServed.length > 0 &&
-            !networkServed.some((line) => enabledLineIds.has(line.id))
           return (
             <li key={station.id}>
               <button
                 type="button"
-                className={`station-item${selected ? ' selected' : ''}${dimmed ? ' dimmed' : ''}`}
+                className={`station-item${selected ? ' selected' : ''}`}
                 onClick={() => onSelect(selected ? null : station.id)}
               >
                 <div className="station-name">{station.name}</div>

@@ -67,7 +67,6 @@ interface MapViewProps {
   onSelectStation: (stationId: string | null) => void
 }
 
-const DIMMED_COLOR = '#9ca3af'
 const FALLBACK_COLOR = '#1d70b8'
 const WALK_COLOR = '#1d70b8'
 
@@ -82,20 +81,10 @@ export default function MapView({
 }: MapViewProps) {
   function stationColor(station: Station, selected: boolean): string {
     if (selected) return '#d4351c'
-    const enabled = station.lines.find((line) => enabledLineIds.has(line.id))
-    if (enabled) return lineColor(enabled.id)
-    const onNetwork = station.lines.some((line) =>
-      networkLines.some((n) => n.id === line.id),
-    )
-    return onNetwork ? DIMMED_COLOR : FALLBACK_COLOR
-  }
-
-  function isDimmed(station: Station): boolean {
-    const networkServed = station.lines.filter((line) =>
-      networkLines.some((n) => n.id === line.id),
-    )
-    if (networkServed.length === 0) return false
-    return !networkServed.some((line) => enabledLineIds.has(line.id))
+    // Search markers stay fully visible and use serving-line colour regardless
+    // of which network paths are toggled on the overlay.
+    const firstLine = station.lines[0]
+    return firstLine ? lineColor(firstLine.id) : FALLBACK_COLOR
   }
 
   return (
@@ -167,7 +156,7 @@ export default function MapView({
             pathOptions={{
               color,
               fillColor: color,
-              fillOpacity: isDimmed(station) ? 0.35 : 0.85,
+              fillOpacity: 0.85,
               weight: 2,
             }}
             eventHandlers={{

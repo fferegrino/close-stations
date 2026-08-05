@@ -133,8 +133,6 @@ function App() {
           routes={routes}
           loadingRoutes={loadingRoutes}
           selectedStationId={selectedStationId}
-          enabledLineIds={enabledLineIds}
-          networkLineIds={new Set(networkLines.map((line) => line.id))}
           onSelect={setSelectedStationId}
         />
       </aside>

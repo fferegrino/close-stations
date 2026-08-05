@@ -137,10 +137,6 @@
   background: rgba(212, 53, 28, 0.06);
 }
 
-.station-item.dimmed {
-  opacity: 0.45;
-}
-
 .line-filter {
   padding: 0;
 }
