@@ -17,26 +17,17 @@ export default function LineFilter({
   onToggleAll,
 }: LineFilterProps) {
   if (loading && lines.length === 0) {
-    return (
-      <div className="line-filter">
-        <h2>Lines</h2>
-        <p className="line-filter-hint">Loading network map…</p>
-      </div>
-    )
+    return <p className="line-filter-hint">Loading network map…</p>
   }
 
   if (lines.length === 0) return null
 
   const allOn = lines.every((line) => enabledLineIds.has(line.id))
   const anyOn = lines.some((line) => enabledLineIds.has(line.id))
-  // Master switch is on when every line is on; off otherwise (partial counts as off)
   const masterOn = allOn
 
   return (
     <div className="line-filter">
-      <div className="line-filter-header">
-        <h2>Lines</h2>
-      </div>
       <button
         type="button"
         className={`line-switch line-switch-master${masterOn ? ' on' : ''}${anyOn && !allOn ? ' partial' : ''}`}
@@ -51,8 +42,8 @@ export default function LineFilter({
         Show network lines
       </button>
       <p className="line-filter-hint">
-        Tube, Overground, DLR, Elizabeth and Tram routes. Toggle individual
-        lines below, or use the switch above for all at once.
+        Tube, Overground, DLR, Elizabeth and Tram. Toggle individual lines, or
+        use the switch above for all at once.
       </p>
       <div className="line-filter-chips">
         {lines.map((line) => {

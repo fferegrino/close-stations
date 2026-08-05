@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import AddressSearch from './components/AddressSearch'
-import LineFilter from './components/LineFilter'
+import NetworkControls from './components/NetworkControls'
 import StationList from './components/StationList'
 import MapView from './components/MapView'
 import { geocodeAddress } from './api/geocode'
@@ -118,25 +118,13 @@ function App() {
           )}
           {origin && <p className="origin-name">{origin.displayName}</p>}
         </header>
-        <LineFilter
-          lines={networkLines}
-          enabledLineIds={enabledLineIds}
-          loading={loadingNetwork}
-          onToggle={toggleLine}
-          onToggleAll={(on) =>
-            setEnabledLineIds(
-              on
-                ? new Set(networkLines.map((line) => line.id))
-                : new Set(),
-            )
-          }
-        />
         {!origin && !loading && !error && (
           <div className="empty-state">
             <p>
               The map shows how Tube, Overground, DLR, Elizabeth and Tram lines
-              connect. Search for a London address to add walking routes to
-              nearby stations.
+              connect. Use the Lines control on the map to show or hide routes.
+              Search for a London address to add walking routes to nearby
+              stations.
             </p>
           </div>
         )}
@@ -151,6 +139,17 @@ function App() {
         />
       </aside>
       <main className="map-area">
+        <NetworkControls
+          lines={networkLines}
+          enabledLineIds={enabledLineIds}
+          loading={loadingNetwork}
+          onToggle={toggleLine}
+          onToggleAll={(on) =>
+            setEnabledLineIds(
+              on ? new Set(networkLines.map((line) => line.id)) : new Set(),
+            )
+          }
+        />
         <MapView
           origin={origin}
           stations={stations}
