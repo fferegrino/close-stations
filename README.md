@@ -9,8 +9,9 @@ closest Tube and rail stations within 1.5 miles.
   once from the TfL Line Route Sequence API and drawn permanently so you can see how
   stations connect. Toggle individual lines via the Lines control on the map.
 - **Coverage areas** — a transparent circle (800 m, ~10‑minute walk) is drawn around
-  every network station. Overlaps highlight better‑connected areas. The shape is
-  abstracted so circles can later be replaced with isochrones or other polygons.
+  every network station, including London National Rail stations (kept inside a
+  Greater London bounding box). Overlaps highlight better‑connected areas. The shape
+  is abstracted so circles can later be replaced with isochrones or other polygons.
   Toggle with the Coverage control on the map (independent of search and lines).
 - **Geocoding** — the address is resolved to coordinates using the
   [Nominatim](https://nominatim.org/release-docs/latest/api/Search/) (OpenStreetMap) search API,
@@ -21,8 +22,8 @@ closest Tube and rail stations within 1.5 miles.
   (`mode=walking`), and are drawn on the map.
 - **Map** — [Leaflet](https://leafletjs.com/) with OpenStreetMap tiles.
 
-National Rail operator routes (e.g. Southeastern) are not included in the permanent
-network overlay — TfL only publishes geometry for modes it operates.
+National Rail stations are included in coverage, but National Rail route *paths* are
+not drawn on the Lines overlay — TfL only publishes geometry for modes it operates.
 
 No API keys or backend required; everything runs in the browser.
 

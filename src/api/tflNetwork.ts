@@ -5,6 +5,14 @@ const TFL_BASE = 'https://api.tfl.gov.uk'
 /** Modes that expose route geometry via the TfL Line API. */
 const NETWORK_MODES = 'tube,elizabeth-line,dlr,overground,tram'
 
+/** Greater London bounding box used to keep National Rail catchments local. */
+const LONDON_BBOX = {
+  minLon: -0.5103,
+  maxLon: 0.334,
+  minLat: 51.2868,
+  maxLat: 51.6919,
+}
+
 interface TflLine {
   id: string
   name: string
@@ -14,6 +22,13 @@ interface TflLine {
 interface TflRouteStation {
   id: string
   name: string
+  lat: number
+  lon: number
+}
+
+interface TflStopPoint {
+  id: string
+  commonName: string
   lat: number
   lon: number
 }
@@ -29,6 +44,15 @@ interface TflRouteSequence {
 export interface NetworkData {
   lines: NetworkLine[]
   stations: NetworkStation[]
+}
+
+function isInLondon(lat: number, lon: number): boolean {
+  return (
+    lon >= LONDON_BBOX.minLon &&
+    lon <= LONDON_BBOX.maxLon &&
+    lat >= LONDON_BBOX.minLat &&
+    lat <= LONDON_BBOX.maxLat
+  )
 }
 
 /**
@@ -52,8 +76,40 @@ function parseLineStrings(lineStrings: string[]): [number, number][][] {
 }
 
 /**
- * Load Tube / Overground / DLR / Elizabeth / Tram route geometry and unique
- * station points once. Uses inbound sequences only (outbound mirrors paths).
+ * National Rail has no TfL route geometry, but StopPoints per operator let us
+ * add London stations to the coverage layer.
+ */
+async function fetchLondonRailStations(
+  stationsById: Map<string, NetworkStation>,
+): Promise<void> {
+  const listResponse = await fetch(`${TFL_BASE}/Line/Mode/national-rail`)
+  if (!listResponse.ok) return
+
+  const operators: TflLine[] = await listResponse.json()
+  await Promise.allSettled(
+    operators.map(async (operator) => {
+      const response = await fetch(
+        `${TFL_BASE}/Line/${operator.id}/StopPoints`,
+      )
+      if (!response.ok) return
+      const stopPoints: TflStopPoint[] = await response.json()
+      for (const stop of stopPoints) {
+        if (!stop.id || stationsById.has(stop.id)) continue
+        if (!isInLondon(stop.lat, stop.lon)) continue
+        stationsById.set(stop.id, {
+          id: stop.id,
+          name: stop.commonName,
+          lat: stop.lat,
+          lon: stop.lon,
+        })
+      }
+    }),
+  )
+}
+
+/**
+ * Load Tube / Overground / DLR / Elizabeth / Tram route geometry, plus unique
+ * station points for coverage (including London National Rail stations).
  */
 export async function fetchNetworkData(): Promise<NetworkData> {
   const listResponse = await fetch(
@@ -103,6 +159,8 @@ export async function fetchNetworkData(): Promise<NetworkData> {
   for (const result of results) {
     if (result.status === 'fulfilled') network.push(result.value)
   }
+
+  await fetchLondonRailStations(stationsById)
 
   return {
     lines: network.sort((a, b) => a.name.localeCompare(b.name)),
