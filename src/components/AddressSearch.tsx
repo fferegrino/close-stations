@@ -22,6 +22,8 @@ export default function AddressSearch({ onSearch, loading }: AddressSearchProps)
         onChange={(e) => setAddress(e.target.value)}
         placeholder="e.g. 10 Downing Street"
         aria-label="London address"
+        data-1p-ignore="true"
+        autoComplete="off"
         disabled={loading}
       />
       <button type="submit" disabled={loading || !address.trim()}>
