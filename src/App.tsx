@@ -1,18 +1,22 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AddressSearch from './components/AddressSearch'
-import LineFilter, { uniqueLines } from './components/LineFilter'
+import LineFilter from './components/LineFilter'
 import StationList from './components/StationList'
 import MapView from './components/MapView'
 import { geocodeAddress } from './api/geocode'
 import { findNearbyStations, getWalkingRoutes } from './api/tfl'
-import type { GeocodedAddress, Station, WalkingRoute } from './types'
+import { fetchNetworkLines } from './api/tflNetwork'
+import type {
+  GeocodedAddress,
+  NetworkLine,
+  Station,
+  WalkingRoute,
+} from './types'
 import './App.css'
 
-function allLineIds(stations: Station[]): Set<string> {
-  return new Set(uniqueLines(stations).map((line) => line.id))
-}
-
 function App() {
+  const [networkLines, setNetworkLines] = useState<NetworkLine[]>([])
+  const [loadingNetwork, setLoadingNetwork] = useState(true)
   const [origin, setOrigin] = useState<GeocodedAddress | null>(null)
   const [stations, setStations] = useState<Station[]>([])
   const [routes, setRoutes] = useState<Map<string, WalkingRoute>>(new Map())
@@ -22,6 +26,33 @@ function App() {
   const [loadingRoutes, setLoadingRoutes] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    let cancelled = false
+    setLoadingNetwork(true)
+    fetchNetworkLines()
+      .then((lines) => {
+        if (cancelled) return
+        setNetworkLines(lines)
+        setEnabledLineIds(new Set(lines.map((line) => line.id)))
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error(err)
+          setError(
+            err instanceof Error
+              ? `Could not load network map: ${err.message}`
+              : 'Could not load network map.',
+          )
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingNetwork(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   async function handleSearch(address: string) {
     setLoading(true)
     setError(null)
@@ -29,7 +60,6 @@ function App() {
     setStations([])
     setRoutes(new Map())
     setSelectedStationId(null)
-    setEnabledLineIds(new Set())
     try {
       const result = await geocodeAddress(address)
       if (!result) {
@@ -40,8 +70,6 @@ function App() {
 
       const nearby = await findNearbyStations(result)
       setStations(nearby)
-      // Lines are on by default — permanent colour view until toggled off
-      setEnabledLineIds(allLineIds(nearby))
       if (nearby.length === 0) {
         setError('No stations found within 1.5 miles of that address.')
         return
@@ -90,26 +118,31 @@ function App() {
           )}
           {origin && <p className="origin-name">{origin.displayName}</p>}
         </header>
+        <LineFilter
+          lines={networkLines}
+          enabledLineIds={enabledLineIds}
+          loading={loadingNetwork}
+          onToggle={toggleLine}
+          onShowAll={() =>
+            setEnabledLineIds(new Set(networkLines.map((line) => line.id)))
+          }
+        />
         {!origin && !loading && !error && (
           <div className="empty-state">
             <p>
-              Search for a London address above to see nearby Tube and rail
-              stations and the walking route to each one.
+              The map shows how Tube, Overground, DLR, Elizabeth and Tram lines
+              connect. Search for a London address to add walking routes to
+              nearby stations.
             </p>
           </div>
         )}
-        <LineFilter
-          stations={stations}
-          enabledLineIds={enabledLineIds}
-          onToggle={toggleLine}
-          onShowAll={() => setEnabledLineIds(allLineIds(stations))}
-        />
         <StationList
           stations={stations}
           routes={routes}
           loadingRoutes={loadingRoutes}
           selectedStationId={selectedStationId}
           enabledLineIds={enabledLineIds}
+          networkLineIds={new Set(networkLines.map((line) => line.id))}
           onSelect={setSelectedStationId}
         />
       </aside>
@@ -118,6 +151,7 @@ function App() {
           origin={origin}
           stations={stations}
           routes={routes}
+          networkLines={networkLines}
           selectedStationId={selectedStationId}
           enabledLineIds={enabledLineIds}
           onSelectStation={setSelectedStationId}

@@ -15,7 +15,12 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
 import { metresToMiles } from '../api/tfl'
 import { lineColor, lineTextColor } from '../lineColors'
-import type { GeocodedAddress, Station, WalkingRoute } from '../types'
+import type {
+  GeocodedAddress,
+  NetworkLine,
+  Station,
+  WalkingRoute,
+} from '../types'
 
 // Vite bundling breaks Leaflet's default icon URL resolution
 L.Icon.Default.mergeOptions({
@@ -56,6 +61,7 @@ interface MapViewProps {
   origin: GeocodedAddress | null
   stations: Station[]
   routes: Map<string, WalkingRoute>
+  networkLines: NetworkLine[]
   selectedStationId: string | null
   enabledLineIds: Set<string>
   onSelectStation: (stationId: string | null) => void
@@ -63,39 +69,39 @@ interface MapViewProps {
 
 const DIMMED_COLOR = '#9ca3af'
 const FALLBACK_COLOR = '#1d70b8'
+const WALK_COLOR = '#1d70b8'
 
 export default function MapView({
   origin,
   stations,
   routes,
+  networkLines,
   selectedStationId,
   enabledLineIds,
   onSelectStation,
 }: MapViewProps) {
-  const stationsById = new Map(stations.map((s) => [s.id, s]))
-
-  /**
-   * Permanent line-coloured view: use the first enabled line's colour.
-   * Selected station stays red; stations with no enabled lines are dimmed grey.
-   */
   function stationColor(station: Station, selected: boolean): string {
     if (selected) return '#d4351c'
-    const match = station.lines.find((line) => enabledLineIds.has(line.id))
-    if (match) return lineColor(match.id)
-    if (station.lines.length > 0) return DIMMED_COLOR
-    return FALLBACK_COLOR
+    const enabled = station.lines.find((line) => enabledLineIds.has(line.id))
+    if (enabled) return lineColor(enabled.id)
+    const onNetwork = station.lines.some((line) =>
+      networkLines.some((n) => n.id === line.id),
+    )
+    return onNetwork ? DIMMED_COLOR : FALLBACK_COLOR
   }
 
   function isDimmed(station: Station): boolean {
-    return (
-      station.lines.length > 0 &&
-      !station.lines.some((line) => enabledLineIds.has(line.id))
+    const networkServed = station.lines.filter((line) =>
+      networkLines.some((n) => n.id === line.id),
     )
+    if (networkServed.length === 0) return false
+    return !networkServed.some((line) => enabledLineIds.has(line.id))
   }
+
   return (
     <MapContainer
       center={LONDON_CENTER}
-      zoom={13}
+      zoom={12}
       className="map-container"
       scrollWheelZoom
     >
@@ -103,24 +109,43 @@ export default function MapView({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+
+      {/* Permanent TfL network paths — how stations are connected */}
+      {networkLines.map((line) => {
+        if (!enabledLineIds.has(line.id)) return null
+        const color = lineColor(line.id)
+        return line.paths.map((path, i) => (
+          <Polyline
+            key={`${line.id}-${i}`}
+            positions={path}
+            pathOptions={{
+              color,
+              weight: 4,
+              opacity: 0.85,
+              lineCap: 'round',
+              lineJoin: 'round',
+            }}
+          />
+        ))
+      })}
+
       {origin && (
         <Marker position={[origin.lat, origin.lon]}>
           <Popup>{origin.displayName}</Popup>
         </Marker>
       )}
+
+      {/* Walking routes from the searched address */}
       {[...routes.values()].map((route) => {
         const selected = route.stationId === selectedStationId
-        const station = stationsById.get(route.stationId)
-        const dimmed = station ? isDimmed(station) : false
-        const color = station ? stationColor(station, selected) : '#1d70b8'
         return (
           <Polyline
-            key={route.stationId}
+            key={`walk-${route.stationId}`}
             positions={route.path}
             pathOptions={{
-              color,
+              color: selected ? '#d4351c' : WALK_COLOR,
               weight: selected ? 5 : 3,
-              opacity: selected ? 0.95 : dimmed ? 0.2 : 0.6,
+              opacity: selected ? 0.95 : 0.7,
               dashArray: selected ? undefined : '6 8',
             }}
             eventHandlers={{
@@ -129,6 +154,7 @@ export default function MapView({
           />
         )
       })}
+
       {stations.map((station) => {
         const route = routes.get(station.id)
         const selected = station.id === selectedStationId
@@ -141,7 +167,7 @@ export default function MapView({
             pathOptions={{
               color,
               fillColor: color,
-              fillOpacity: isDimmed(station) ? 0.35 : 0.8,
+              fillOpacity: isDimmed(station) ? 0.35 : 0.85,
               weight: 2,
             }}
             eventHandlers={{

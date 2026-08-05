@@ -5,6 +5,9 @@ closest Tube and rail stations within 1.5 miles.
 
 ## How it works
 
+- **Network map** — Tube, Overground, DLR, Elizabeth line and Tram routes are loaded
+  once from the TfL Line Route Sequence API and drawn permanently so you can see how
+  stations connect. Toggle individual lines on or off in the sidebar.
 - **Geocoding** — the address is resolved to coordinates using the
   [Nominatim](https://nominatim.org/release-docs/latest/api/Search/) (OpenStreetMap) search API,
   restricted to a Greater London bounding box.
@@ -13,6 +16,9 @@ closest Tube and rail stations within 1.5 miles.
 - **Walking routes** — the actual walking paths and durations come from the TfL Journey Planner
   (`mode=walking`), and are drawn on the map.
 - **Map** — [Leaflet](https://leafletjs.com/) with OpenStreetMap tiles.
+
+National Rail operator routes (e.g. Southeastern) are not included in the permanent
+network overlay — TfL only publishes geometry for modes it operates.
 
 No API keys or backend required; everything runs in the browser.
 

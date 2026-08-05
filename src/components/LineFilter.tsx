@@ -1,34 +1,33 @@
-import { useMemo } from 'react'
 import { lineColor, lineTextColor } from '../lineColors'
-import type { Station, StationLine } from '../types'
+import type { NetworkLine } from '../types'
 
 interface LineFilterProps {
-  stations: Station[]
+  lines: NetworkLine[]
   enabledLineIds: Set<string>
+  loading: boolean
   onToggle: (lineId: string) => void
   onShowAll: () => void
 }
 
-export function uniqueLines(stations: Station[]): StationLine[] {
-  const byId = new Map<string, StationLine>()
-  for (const station of stations) {
-    for (const line of station.lines) {
-      byId.set(line.id, line)
-    }
-  }
-  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
-}
-
 export default function LineFilter({
-  stations,
+  lines,
   enabledLineIds,
+  loading,
   onToggle,
   onShowAll,
 }: LineFilterProps) {
-  const lines = useMemo(() => uniqueLines(stations), [stations])
-  const allOn = lines.length > 0 && lines.every((line) => enabledLineIds.has(line.id))
+  if (loading && lines.length === 0) {
+    return (
+      <div className="line-filter">
+        <h2>Lines</h2>
+        <p className="line-filter-hint">Loading network map…</p>
+      </div>
+    )
+  }
 
   if (lines.length === 0) return null
+
+  const allOn = lines.every((line) => enabledLineIds.has(line.id))
 
   return (
     <div className="line-filter">
@@ -41,7 +40,8 @@ export default function LineFilter({
         )}
       </div>
       <p className="line-filter-hint">
-        Lines are shown in their colours. Toggle a line off to hide it.
+        Tube, Overground, DLR, Elizabeth and Tram routes. Toggle a line off to
+        hide it.
       </p>
       <div className="line-filter-chips">
         {lines.map((line) => {

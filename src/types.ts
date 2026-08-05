@@ -32,3 +32,12 @@ export interface WalkingRoute {
   /** Route polyline as [lat, lon] pairs */
   path: [number, number][]
 }
+
+/** Permanent TfL network geometry for one line (Tube, Overground, etc.). */
+export interface NetworkLine {
+  id: string
+  name: string
+  mode: string
+  /** One or more route segments as [lat, lon] polylines */
+  paths: [number, number][][]
+}
