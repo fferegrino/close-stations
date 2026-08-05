@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import AddressSearch from './components/AddressSearch'
-import LineFilter from './components/LineFilter'
+import LineFilter, { uniqueLines } from './components/LineFilter'
 import StationList from './components/StationList'
 import MapView from './components/MapView'
 import { geocodeAddress } from './api/geocode'
@@ -8,12 +8,16 @@ import { findNearbyStations, getWalkingRoutes } from './api/tfl'
 import type { GeocodedAddress, Station, WalkingRoute } from './types'
 import './App.css'
 
+function allLineIds(stations: Station[]): Set<string> {
+  return new Set(uniqueLines(stations).map((line) => line.id))
+}
+
 function App() {
   const [origin, setOrigin] = useState<GeocodedAddress | null>(null)
   const [stations, setStations] = useState<Station[]>([])
   const [routes, setRoutes] = useState<Map<string, WalkingRoute>>(new Map())
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null)
-  const [activeLineIds, setActiveLineIds] = useState<Set<string>>(new Set())
+  const [enabledLineIds, setEnabledLineIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [loadingRoutes, setLoadingRoutes] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,7 +29,7 @@ function App() {
     setStations([])
     setRoutes(new Map())
     setSelectedStationId(null)
-    setActiveLineIds(new Set())
+    setEnabledLineIds(new Set())
     try {
       const result = await geocodeAddress(address)
       if (!result) {
@@ -36,6 +40,8 @@ function App() {
 
       const nearby = await findNearbyStations(result)
       setStations(nearby)
+      // Lines are on by default — permanent colour view until toggled off
+      setEnabledLineIds(allLineIds(nearby))
       if (nearby.length === 0) {
         setError('No stations found within 1.5 miles of that address.')
         return
@@ -55,7 +61,7 @@ function App() {
   }
 
   function toggleLine(lineId: string) {
-    setActiveLineIds((prev) => {
+    setEnabledLineIds((prev) => {
       const next = new Set(prev)
       if (next.has(lineId)) {
         next.delete(lineId)
@@ -94,16 +100,16 @@ function App() {
         )}
         <LineFilter
           stations={stations}
-          activeLineIds={activeLineIds}
+          enabledLineIds={enabledLineIds}
           onToggle={toggleLine}
-          onClear={() => setActiveLineIds(new Set())}
+          onShowAll={() => setEnabledLineIds(allLineIds(stations))}
         />
         <StationList
           stations={stations}
           routes={routes}
           loadingRoutes={loadingRoutes}
           selectedStationId={selectedStationId}
-          activeLineIds={activeLineIds}
+          enabledLineIds={enabledLineIds}
           onSelect={setSelectedStationId}
         />
       </aside>
@@ -113,7 +119,7 @@ function App() {
           stations={stations}
           routes={routes}
           selectedStationId={selectedStationId}
-          activeLineIds={activeLineIds}
+          enabledLineIds={enabledLineIds}
           onSelectStation={setSelectedStationId}
         />
       </main>

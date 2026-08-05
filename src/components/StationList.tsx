@@ -7,7 +7,7 @@ interface StationListProps {
   routes: Map<string, WalkingRoute>
   loadingRoutes: boolean
   selectedStationId: string | null
-  activeLineIds: Set<string>
+  enabledLineIds: Set<string>
   onSelect: (stationId: string | null) => void
 }
 
@@ -16,7 +16,7 @@ export default function StationList({
   routes,
   loadingRoutes,
   selectedStationId,
-  activeLineIds,
+  enabledLineIds,
   onSelect,
 }: StationListProps) {
   if (stations.length === 0) return null
@@ -40,8 +40,8 @@ export default function StationList({
           const route = routes.get(station.id)
           const selected = station.id === selectedStationId
           const dimmed =
-            activeLineIds.size > 0 &&
-            !station.lines.some((line) => activeLineIds.has(line.id))
+            station.lines.length > 0 &&
+            !station.lines.some((line) => enabledLineIds.has(line.id))
           return (
             <li key={station.id}>
               <button

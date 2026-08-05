@@ -57,38 +57,39 @@ interface MapViewProps {
   stations: Station[]
   routes: Map<string, WalkingRoute>
   selectedStationId: string | null
-  activeLineIds: Set<string>
+  enabledLineIds: Set<string>
   onSelectStation: (stationId: string | null) => void
 }
 
 const DIMMED_COLOR = '#9ca3af'
+const FALLBACK_COLOR = '#1d70b8'
 
 export default function MapView({
   origin,
   stations,
   routes,
   selectedStationId,
-  activeLineIds,
+  enabledLineIds,
   onSelectStation,
 }: MapViewProps) {
   const stationsById = new Map(stations.map((s) => [s.id, s]))
 
   /**
-   * Marker/route colour for a station given the active line highlights:
-   * red when selected, the first matching line's colour when highlighted,
-   * grey when filtered out, TfL blue otherwise.
+   * Permanent line-coloured view: use the first enabled line's colour.
+   * Selected station stays red; stations with no enabled lines are dimmed grey.
    */
   function stationColor(station: Station, selected: boolean): string {
     if (selected) return '#d4351c'
-    if (activeLineIds.size === 0) return '#1d70b8'
-    const match = station.lines.find((line) => activeLineIds.has(line.id))
-    return match ? lineColor(match.id) : DIMMED_COLOR
+    const match = station.lines.find((line) => enabledLineIds.has(line.id))
+    if (match) return lineColor(match.id)
+    if (station.lines.length > 0) return DIMMED_COLOR
+    return FALLBACK_COLOR
   }
 
   function isDimmed(station: Station): boolean {
     return (
-      activeLineIds.size > 0 &&
-      !station.lines.some((line) => activeLineIds.has(line.id))
+      station.lines.length > 0 &&
+      !station.lines.some((line) => enabledLineIds.has(line.id))
     )
   }
   return (
