@@ -41,3 +41,22 @@ export interface NetworkLine {
   /** One or more route segments as [lat, lon] polylines */
   paths: [number, number][][]
 }
+
+/** A station on the permanent network map (independent of search results). */
+export interface NetworkStation extends LatLon {
+  id: string
+  name: string
+}
+
+/**
+ * Catchment geometry around a station.
+ * Start with circles; polygons enable future isochrones / custom shapes.
+ */
+export type CatchmentGeometry =
+  | { kind: 'circle'; center: LatLon; radiusMetres: number }
+  | { kind: 'polygon'; rings: [number, number][][] }
+
+export interface StationCatchment {
+  stationId: string
+  geometry: CatchmentGeometry
+}

@@ -7,7 +7,11 @@ closest Tube and rail stations within 1.5 miles.
 
 - **Network map** — Tube, Overground, DLR, Elizabeth line and Tram routes are loaded
   once from the TfL Line Route Sequence API and drawn permanently so you can see how
-  stations connect. Toggle individual lines on or off in the sidebar.
+  stations connect. Toggle individual lines via the Lines control on the map.
+- **Coverage areas** — a transparent circle (800 m, ~10‑minute walk) is drawn around
+  every network station. Overlaps highlight better‑connected areas. The shape is
+  abstracted so circles can later be replaced with isochrones or other polygons.
+  Toggle with the Coverage control on the map (independent of search and lines).
 - **Geocoding** — the address is resolved to coordinates using the
   [Nominatim](https://nominatim.org/release-docs/latest/api/Search/) (OpenStreetMap) search API,
   restricted to a Greater London bounding box.

@@ -5,10 +5,12 @@ import StationList from './components/StationList'
 import MapView from './components/MapView'
 import { geocodeAddress } from './api/geocode'
 import { findNearbyStations, getWalkingRoutes } from './api/tfl'
-import { fetchNetworkLines } from './api/tflNetwork'
+import { fetchNetworkData } from './api/tflNetwork'
+import { buildCircleCatchments } from './catchment/circle'
 import type {
   GeocodedAddress,
   NetworkLine,
+  NetworkStation,
   Station,
   WalkingRoute,
 } from './types'
@@ -16,7 +18,9 @@ import './App.css'
 
 function App() {
   const [networkLines, setNetworkLines] = useState<NetworkLine[]>([])
+  const [networkStations, setNetworkStations] = useState<NetworkStation[]>([])
   const [loadingNetwork, setLoadingNetwork] = useState(true)
+  const [showCatchments, setShowCatchments] = useState(true)
   const [origin, setOrigin] = useState<GeocodedAddress | null>(null)
   const [stations, setStations] = useState<Station[]>([])
   const [routes, setRoutes] = useState<Map<string, WalkingRoute>>(new Map())
@@ -26,13 +30,16 @@ function App() {
   const [loadingRoutes, setLoadingRoutes] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const catchments = buildCircleCatchments(networkStations)
+
   useEffect(() => {
     let cancelled = false
     setLoadingNetwork(true)
-    fetchNetworkLines()
-      .then((lines) => {
+    fetchNetworkData()
+      .then(({ lines, stations: networkStationList }) => {
         if (cancelled) return
         setNetworkLines(lines)
+        setNetworkStations(networkStationList)
         setEnabledLineIds(new Set(lines.map((line) => line.id)))
       })
       .catch((err) => {
@@ -121,10 +128,9 @@ function App() {
         {!origin && !loading && !error && (
           <div className="empty-state">
             <p>
-              The map shows how Tube, Overground, DLR, Elizabeth and Tram lines
-              connect. Use the Lines control on the map to show or hide routes.
-              Search for a London address to add walking routes to nearby
-              stations.
+              Shaded coverage areas show how well different parts of London are
+              served by stations. Use Coverage and Lines on the map to toggle
+              overlays. Search for an address to add walking routes.
             </p>
           </div>
         )}
@@ -141,18 +147,22 @@ function App() {
           lines={networkLines}
           enabledLineIds={enabledLineIds}
           loading={loadingNetwork}
+          showCatchments={showCatchments}
           onToggle={toggleLine}
           onToggleAll={(on) =>
             setEnabledLineIds(
               on ? new Set(networkLines.map((line) => line.id)) : new Set(),
             )
           }
+          onToggleCatchments={() => setShowCatchments((prev) => !prev)}
         />
         <MapView
           origin={origin}
           stations={stations}
           routes={routes}
           networkLines={networkLines}
+          catchments={catchments}
+          showCatchments={showCatchments}
           selectedStationId={selectedStationId}
           enabledLineIds={enabledLineIds}
           onSelectStation={setSelectedStationId}

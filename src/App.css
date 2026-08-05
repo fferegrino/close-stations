@@ -166,6 +166,11 @@
   gap: 8px;
 }
 
+.network-controls-toolbar {
+  display: flex;
+  gap: 8px;
+}
+
 .network-controls-toggle {
   display: inline-flex;
   align-items: center;
@@ -183,8 +188,13 @@
 }
 
 .network-controls-toggle.open,
-.network-controls-toggle:hover {
+.network-controls-toggle:hover,
+.network-controls-toggle.active {
   border-color: var(--accent);
+}
+
+.network-controls-toggle.active {
+  background: var(--accent-bg);
 }
 
 .network-controls-icon {

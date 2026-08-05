@@ -1,4 +1,4 @@
-import type { NetworkLine } from '../types'
+import type { NetworkLine, NetworkStation } from '../types'
 
 const TFL_BASE = 'https://api.tfl.gov.uk'
 
@@ -11,11 +11,24 @@ interface TflLine {
   modeName: string
 }
 
+interface TflRouteStation {
+  id: string
+  name: string
+  lat: number
+  lon: number
+}
+
 interface TflRouteSequence {
   lineId: string
   lineName: string
   mode: string
   lineStrings: string[]
+  stations?: TflRouteStation[]
+}
+
+export interface NetworkData {
+  lines: NetworkLine[]
+  stations: NetworkStation[]
 }
 
 /**
@@ -39,10 +52,10 @@ function parseLineStrings(lineStrings: string[]): [number, number][][] {
 }
 
 /**
- * Load Tube / Overground / DLR / Elizabeth / Tram route geometry once.
- * Uses inbound sequences only (outbound mirrors the same paths).
+ * Load Tube / Overground / DLR / Elizabeth / Tram route geometry and unique
+ * station points once. Uses inbound sequences only (outbound mirrors paths).
  */
-export async function fetchNetworkLines(): Promise<NetworkLine[]> {
+export async function fetchNetworkData(): Promise<NetworkData> {
   const listResponse = await fetch(
     `${TFL_BASE}/Line/Mode/${NETWORK_MODES}`,
   )
@@ -51,6 +64,7 @@ export async function fetchNetworkLines(): Promise<NetworkLine[]> {
   }
 
   const lines: TflLine[] = await listResponse.json()
+  const stationsById = new Map<string, NetworkStation>()
 
   const results = await Promise.allSettled(
     lines.map(async (line) => {
@@ -65,6 +79,17 @@ export async function fetchNetworkLines(): Promise<NetworkLine[]> {
       if (paths.length === 0) {
         throw new Error(`No geometry for ${line.id}`)
       }
+
+      for (const station of sequence.stations ?? []) {
+        if (!station.id || stationsById.has(station.id)) continue
+        stationsById.set(station.id, {
+          id: station.id,
+          name: station.name,
+          lat: station.lat,
+          lon: station.lon,
+        })
+      }
+
       return {
         id: line.id,
         name: line.name,
@@ -79,5 +104,8 @@ export async function fetchNetworkLines(): Promise<NetworkLine[]> {
     if (result.status === 'fulfilled') network.push(result.value)
   }
 
-  return network.sort((a, b) => a.name.localeCompare(b.name))
+  return {
+    lines: network.sort((a, b) => a.name.localeCompare(b.name)),
+    stations: [...stationsById.values()],
+  }
 }

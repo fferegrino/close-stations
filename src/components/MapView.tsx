@@ -15,10 +15,12 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
 import { metresToMiles } from '../api/tfl'
 import { lineColor, lineTextColor } from '../lineColors'
+import CatchmentLayer from './CatchmentLayer'
 import type {
   GeocodedAddress,
   NetworkLine,
   Station,
+  StationCatchment,
   WalkingRoute,
 } from '../types'
 
@@ -62,6 +64,8 @@ interface MapViewProps {
   stations: Station[]
   routes: Map<string, WalkingRoute>
   networkLines: NetworkLine[]
+  catchments: StationCatchment[]
+  showCatchments: boolean
   selectedStationId: string | null
   enabledLineIds: Set<string>
   onSelectStation: (stationId: string | null) => void
@@ -75,6 +79,8 @@ export default function MapView({
   stations,
   routes,
   networkLines,
+  catchments,
+  showCatchments,
   selectedStationId,
   enabledLineIds,
   onSelectStation,
@@ -98,6 +104,9 @@ export default function MapView({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+
+      {/* Station catchments — independent of search and line toggles */}
+      <CatchmentLayer catchments={catchments} visible={showCatchments} />
 
       {/* Permanent TfL network paths — how stations are connected */}
       {networkLines.map((line) => {
