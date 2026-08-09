@@ -189,7 +189,15 @@ main {
   white-space: nowrap;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
+}
+
+.walk-time {
   font-weight: 600;
+}
+
+.walk-dist {
+  font-weight: 400;
+  color: var(--muted);
 }
 
 .lines {
@@ -207,12 +215,6 @@ main {
   border-radius: 4px;
   color: #fff;
   background: #555;
-}
-
-.meta {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 12px;
 }
 
 .settings {

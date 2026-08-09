@@ -131,12 +131,18 @@ function renderStations(stations) {
 
     const walk = document.createElement("div");
     walk.className = "walk";
+    const walkDist = formatMetres(station.walkingDistanceMetres);
     if (station.walkingDurationMinutes != null) {
-      walk.textContent = `${station.walkingDurationMinutes} min walk`;
-    } else if (station.distanceMetres != null) {
-      walk.textContent = formatMetres(station.distanceMetres);
-    } else {
-      walk.textContent = "";
+      const time = document.createElement("span");
+      time.className = "walk-time";
+      time.textContent = `${station.walkingDurationMinutes} min`;
+      walk.append(time);
+      if (walkDist) {
+        const dist = document.createElement("span");
+        dist.className = "walk-dist";
+        dist.textContent = ` (${walkDist})`;
+        walk.append(dist);
+      }
     }
 
     top.append(name, walk);
@@ -157,18 +163,6 @@ function renderStations(stations) {
         lines.append(chip);
       }
       if (lines.childElementCount) li.append(lines);
-    }
-
-    const crow = formatMetres(station.distanceMetres);
-    const walkDist = formatMetres(station.walkingDistanceMetres);
-    if (crow || walkDist) {
-      const metaLine = document.createElement("p");
-      metaLine.className = "meta";
-      const bits = [];
-      if (crow) bits.push(`${crow} crow-flies`);
-      if (walkDist) bits.push(`${walkDist} walk`);
-      metaLine.textContent = bits.join(" · ");
-      li.append(metaLine);
     }
 
     stationsEl.append(li);
