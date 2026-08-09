@@ -1,9 +1,9 @@
 # Close Stations (Chrome extension)
 
 Popup extension for Rightmove, Zoopla, and OnTheMarket listing pages.
-**Map lat/long is the source of truth** (not the marketed street name): stations
-and walks are computed from the pin, and the address shown is reverse-geocoded
-from those coordinates.
+**Map lat/long is the source of truth** for stations and walks. The address field
+uses the portal listing address when available (skips Nominatim); otherwise it
+reverse-geocodes the pin.
 
 ## Chrome Web Store zip
 
@@ -38,16 +38,16 @@ the popup.
 
 ## How it works
 
-1. **Content script** extracts **coordinates** from the page (Rightmove
-   `PAGE_MODEL`, Zoopla `__next_f`, OnTheMarket `__NEXT_DATA__` / `__OTM_DATA__`,
-   plus map URL / JSON-LD fallbacks). Portal street labels are ignored for
-   distance. On load it also asks the service worker to **prefetch** the lookup.
-2. **Service worker** reverse-geocodes the pin via Nominatim, and uses the
-   shared TfL client (`shared/tfl`) for nearby stops (~1.5 mi) plus walking
-   routes for the nearest stations. Crow-flies stations are cached and shown
-   first; walking times arrive in a follow-up update. Completed lookups are
-   stored in `chrome.storage.session` (keyed by lat/lon) so the popup can reuse
-   them.
-3. **Popup** shows lat/long first, then an editable address (from the pin), then
-   stations. You can override the address and re-run the lookup, or reset to the
-   map pin.
+1. **Content script** extracts **coordinates** (and a listing address when the
+   portal exposes one) from the page (Rightmove `PAGE_MODEL`, Zoopla `__next_f`,
+   OnTheMarket `__NEXT_DATA__` / `__OTM_DATA__`, plus map URL / JSON-LD
+   fallbacks). Distance always uses the map pin. On load it also asks the
+   service worker to **prefetch** the lookup.
+2. **Service worker** labels the pin from the portal address when present,
+   otherwise reverse-geocodes via Nominatim. It uses the shared TfL client
+   (`shared/tfl`) for nearby stops (~1.5 mi) plus walking routes. Crow-flies
+   stations are cached and shown first; walking times arrive in a follow-up
+   update. Completed lookups are stored in `chrome.storage.session` (keyed by
+   lat/lon) so the popup can reuse them.
+3. **Popup** shows lat/long first, then an editable address, then stations. You
+   can override the address and re-run the lookup, or reset to the map pin.

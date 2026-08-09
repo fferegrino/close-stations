@@ -48,6 +48,18 @@ function coordsKey(latitude: number, longitude: number): string {
   return `${Number(latitude).toFixed(5)},${Number(longitude).toFixed(5)}`
 }
 
+/** Prefer a portal-provided listing address over a Nominatim round-trip. */
+function portalAddressMeta(address: unknown): AddressMeta | undefined {
+  if (typeof address !== 'string') return undefined
+  const trimmed = address.trim()
+  if (!trimmed) return undefined
+  return {
+    pinAddress: trimmed,
+    pinAddressFull: trimmed,
+    pinAddressSource: 'portal',
+  }
+}
+
 function sessionKey(key: string): string {
   return `lookup:${key}`
 }
@@ -398,7 +410,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return
     }
 
-    ensureLookup(latitude, longitude)
+    ensureLookup(latitude, longitude, portalAddressMeta(message.address))
       .done.then(() => sendResponse({ ok: true, started: true }))
       .catch((err: unknown) =>
         sendResponse({
@@ -419,7 +431,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
 
     // Respond as soon as crow-flies stations exist; walking arrives via LOOKUP_UPDATED.
-    ensureLookup(latitude, longitude)
+    ensureLookup(latitude, longitude, portalAddressMeta(message.address))
       .stations.then((result) => sendResponse({ ok: true, ...result }))
       .catch((err: unknown) =>
         sendResponse({

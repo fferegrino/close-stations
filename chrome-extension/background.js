@@ -193,6 +193,17 @@ var inflight = /* @__PURE__ */ new Map();
 function coordsKey(latitude, longitude) {
 	return `${Number(latitude).toFixed(5)},${Number(longitude).toFixed(5)}`;
 }
+/** Prefer a portal-provided listing address over a Nominatim round-trip. */
+function portalAddressMeta(address) {
+	if (typeof address !== "string") return void 0;
+	const trimmed = address.trim();
+	if (!trimmed) return void 0;
+	return {
+		pinAddress: trimmed,
+		pinAddressFull: trimmed,
+		pinAddressSource: "portal"
+	};
+}
 function sessionKey(key) {
 	return `lookup:${key}`;
 }
@@ -455,7 +466,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 			});
 			return;
 		}
-		ensureLookup(latitude, longitude).done.then(() => sendResponse({
+		ensureLookup(latitude, longitude, portalAddressMeta(message.address)).done.then(() => sendResponse({
 			ok: true,
 			started: true
 		})).catch((err) => sendResponse({
@@ -474,7 +485,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 			});
 			return;
 		}
-		ensureLookup(latitude, longitude).stations.then((result) => sendResponse({
+		ensureLookup(latitude, longitude, portalAddressMeta(message.address)).stations.then((result) => sendResponse({
 			ok: true,
 			...result
 		})).catch((err) => sendResponse({

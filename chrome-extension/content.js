@@ -297,6 +297,7 @@ function prefetchLookup() {
         type: "PREFETCH_LOOKUP",
         latitude: result.latitude,
         longitude: result.longitude,
+        address: result.address || null,
         url: location.href,
       })
       .catch(() => {

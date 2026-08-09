@@ -82,11 +82,11 @@ function setAddressUi({ address, overridden, walksPending = false }) {
   if (walksPending) {
     addressHint.textContent = usingOverride
       ? "Using your address override — fetching walking times…"
-      : "From map pin — fetching walking times…";
+      : "Fetching walking times…";
   } else {
     addressHint.textContent = usingOverride
       ? "Using your address override (stations recalculated)."
-      : "From map pin — edit to override, then Look up.";
+      : "Edit to override, then Look up.";
   }
 }
 
@@ -207,11 +207,12 @@ function applyLookupResult(result, { overridden }) {
   renderStations(result.stations || []);
 }
 
-async function lookupFromCoords(latitude, longitude) {
+async function lookupFromCoords(latitude, longitude, address = null) {
   return chrome.runtime.sendMessage({
     type: "LOOKUP_FROM_COORDS",
     latitude,
     longitude,
+    address: address || null,
   });
 }
 
@@ -308,7 +309,8 @@ addressReset.addEventListener("click", async () => {
   try {
     const result = await lookupFromCoords(
       pinOrigin.latitude,
-      pinOrigin.longitude
+      pinOrigin.longitude,
+      pinOrigin.address
     );
     if (!result?.ok) {
       setStatus(result?.error || "Lookup failed.", "error");
@@ -352,10 +354,15 @@ async function main() {
     return;
   }
 
+  const portalAddress =
+    typeof coords.address === "string" && coords.address.trim()
+      ? coords.address.trim()
+      : null;
+
   pinOrigin = {
     latitude: coords.latitude,
     longitude: coords.longitude,
-    address: null,
+    address: portalAddress,
   };
   activeLookup = {
     latitude: coords.latitude,
@@ -364,11 +371,20 @@ async function main() {
 
   // Lat/long from the map pin drives the initial lookup.
   showCoords(coords.latitude, coords.longitude);
-  setLookupBusy(true, "Looking up pin address & TfL stations…");
+  setLookupBusy(
+    true,
+    portalAddress
+      ? "Looking up TfL stations…"
+      : "Looking up pin address & TfL stations…"
+  );
 
   let result;
   try {
-    result = await lookupFromCoords(coords.latitude, coords.longitude);
+    result = await lookupFromCoords(
+      coords.latitude,
+      coords.longitude,
+      portalAddress
+    );
   } catch (err) {
     setLookupBusy(false);
     setStatus(err?.message || "Lookup failed.", "error");
@@ -381,7 +397,8 @@ async function main() {
     return;
   }
 
-  pinOrigin.address = result.pinAddress || result.pinAddressFull || null;
+  pinOrigin.address =
+    portalAddress || result.pinAddress || result.pinAddressFull || null;
   applyLookupResult(result, { overridden: false });
   setLookupBusy(false);
 }
