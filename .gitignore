@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Extension build artefacts / local pack output
+*.zip
+chrome-extension/background.js.map
+
+# Miscellaneous data
+data/
+*.crx
+*.pem

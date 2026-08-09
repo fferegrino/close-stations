@@ -67,7 +67,7 @@ function renderStations(stations) {
   stationsEl.replaceChildren();
 
   if (!stations.length) {
-    setStatus("No rail/tube stations found within ~1.2 miles.", "warn");
+    setStatus("No rail/tube stations found within 1.5 miles.", "warn");
     return;
   }
 
@@ -83,10 +83,10 @@ function renderStations(stations) {
 
     const walk = document.createElement("div");
     walk.className = "walk";
-    if (station.walking_duration_minutes != null) {
-      walk.textContent = `${station.walking_duration_minutes} min walk`;
-    } else if (station.distance_metres != null) {
-      walk.textContent = formatMetres(station.distance_metres);
+    if (station.walkingDurationMinutes != null) {
+      walk.textContent = `${station.walkingDurationMinutes} min walk`;
+    } else if (station.distanceMetres != null) {
+      walk.textContent = formatMetres(station.distanceMetres);
     } else {
       walk.textContent = "";
     }
@@ -109,12 +109,16 @@ function renderStations(stations) {
     if (station.lines?.length) {
       const lines = document.createElement("p");
       lines.className = "lines";
-      lines.textContent = station.lines.slice(0, 6).join(" · ");
+      const lineNames = station.lines
+        .map((line) => (typeof line === "string" ? line : line.name))
+        .filter(Boolean)
+        .slice(0, 6);
+      lines.textContent = lineNames.join(" · ");
       li.append(lines);
     }
 
-    const crow = formatMetres(station.distance_metres);
-    const walkDist = formatMetres(station.walking_distance_metres);
+    const crow = formatMetres(station.distanceMetres);
+    const walkDist = formatMetres(station.walkingDistanceMetres);
     if (crow || walkDist) {
       const metaLine = document.createElement("p");
       metaLine.className = "meta";
@@ -227,7 +231,7 @@ async function main() {
     return;
   }
 
-  showPinAddress(result.pin_address || result.pin_address_full);
+  showPinAddress(result.pinAddress || result.pinAddressFull);
   renderStations(result.stations || []);
 }
 

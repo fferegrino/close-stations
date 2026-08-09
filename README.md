@@ -37,6 +37,21 @@ npm run dev
 Then open the printed URL (defaults to http://localhost:5173) and search for a London
 address, e.g. "10 Downing Street".
 
+TfL nearby-station and walking logic lives in `shared/tfl` and is used by both the
+web app and the Chrome extension.
+
+## Chrome extension
+
+```bash
+npm run build:extension
+# or, for a Chrome Web Store zip:
+npm run pack:extension
+```
+
+Load `chrome-extension/` unpacked for local testing
+(see `chrome-extension/readme.md`). The **Package Chrome Extension** GitHub Action
+builds and uploads a store-ready zip artifact.
+
 ## Build
 
 ```bash
