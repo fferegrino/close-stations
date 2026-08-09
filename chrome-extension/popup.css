@@ -8,14 +8,6 @@
   --accent: #0b6e4f;
   --warn: #8a4b08;
   --error: #9b1c1c;
-  --tube: #0019a8;
-  --rail: #e21836;
-  --overground: #ef7b10;
-  --dlr: #00afad;
-  --elizabeth: #6950a1;
-  --tram: #66cc00;
-  --ferry: #039be5;
-  --cable: #7b2780;
 }
 
 * {
@@ -200,38 +192,23 @@ main {
   font-weight: 600;
 }
 
-.modes {
+.lines {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 6px;
 }
 
-.mode {
+.line {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  text-transform: uppercase;
   padding: 2px 6px;
   border-radius: 4px;
   color: #fff;
   background: #555;
 }
 
-.mode.tube,
-.mode.metro { background: var(--tube); }
-.mode.national-rail,
-.mode.rail { background: var(--rail); }
-.mode.overground { background: var(--overground); }
-.mode.dlr { background: var(--dlr); }
-.mode.elizabeth-line { background: var(--elizabeth); }
-.mode.tram { background: var(--tram); color: #123; }
-.mode.river-bus,
-.mode.river-tour,
-.mode.ferry { background: var(--ferry); }
-.mode.cable-car { background: var(--cable); }
-
-.lines,
 .meta {
   margin: 6px 0 0;
   color: var(--muted);

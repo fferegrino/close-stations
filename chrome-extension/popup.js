@@ -15,19 +15,51 @@ const keySaved = document.getElementById("key-saved");
 let pinOrigin = null;
 let usingOverride = false;
 
-const MODE_LABELS = {
-  tube: "Tube",
-  metro: "Metro",
-  "national-rail": "Rail",
-  overground: "Overground",
-  dlr: "DLR",
-  "elizabeth-line": "Elizabeth",
-  tram: "Tram",
-  "river-bus": "River",
-  "river-tour": "River",
-  ferry: "Ferry",
-  "cable-car": "Cable",
+const LINE_COLORS = {
+  bakerloo: "#B36305",
+  central: "#E32017",
+  circle: "#FFD300",
+  district: "#00782A",
+  "hammersmith-city": "#F3A9BB",
+  jubilee: "#A0A5A9",
+  metropolitan: "#9B0056",
+  northern: "#000000",
+  piccadilly: "#003688",
+  victoria: "#0098D4",
+  "waterloo-city": "#95CDBA",
+  elizabeth: "#60399E",
+  dlr: "#00A4A7",
+  "london-overground": "#EE7C0E",
+  liberty: "#61686B",
+  lioness: "#FFA600",
+  mildmay: "#0077AD",
+  suffragette: "#5BA829",
+  weaver: "#823A62",
+  windrush: "#DC241F",
+  tram: "#84B817",
 };
+
+const FALLBACK_LINE_COLOR = "#4B5563";
+
+function lineColor(lineId) {
+  return LINE_COLORS[String(lineId)] ?? FALLBACK_LINE_COLOR;
+}
+
+function lineTextColor(lineId) {
+  const hex = lineColor(lineId).slice(1);
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luminance > 160 ? "#08060d" : "#fff";
+}
+
+function shortLineName(name) {
+  return String(name || "")
+    .replace(/\s+Underground\s+Line$/i, "")
+    .replace(/\s+Line$/i, "")
+    .trim();
+}
 
 function setStatus(text, kind = "loading") {
   statusEl.hidden = false;
@@ -77,10 +109,6 @@ function formatMetres(m) {
   return `${(m / 1000).toFixed(1)} km`;
 }
 
-function modeClass(mode) {
-  return `mode ${String(mode).toLowerCase().replace(/\s+/g, "-")}`;
-}
-
 function renderStations(stations) {
   statusEl.hidden = true;
   stationsEl.hidden = false;
@@ -114,27 +142,21 @@ function renderStations(stations) {
     top.append(name, walk);
     li.append(top);
 
-    if (station.modes?.length) {
-      const modes = document.createElement("div");
-      modes.className = "modes";
-      for (const mode of station.modes) {
-        const chip = document.createElement("span");
-        chip.className = modeClass(mode);
-        chip.textContent = MODE_LABELS[mode] || mode;
-        modes.append(chip);
-      }
-      li.append(modes);
-    }
-
     if (station.lines?.length) {
-      const lines = document.createElement("p");
+      const lines = document.createElement("div");
       lines.className = "lines";
-      const lineNames = station.lines
-        .map((line) => (typeof line === "string" ? line : line.name))
-        .filter(Boolean)
-        .slice(0, 6);
-      lines.textContent = lineNames.join(" · ");
-      li.append(lines);
+      for (const line of station.lines.slice(0, 8)) {
+        const id = typeof line === "string" ? line : line.id;
+        const label = typeof line === "string" ? line : line.name;
+        if (!label) continue;
+        const chip = document.createElement("span");
+        chip.className = "line";
+        chip.textContent = shortLineName(label);
+        chip.style.background = lineColor(id);
+        chip.style.color = lineTextColor(id);
+        lines.append(chip);
+      }
+      if (lines.childElementCount) li.append(lines);
     }
 
     const crow = formatMetres(station.distanceMetres);
