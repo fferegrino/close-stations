@@ -44,8 +44,10 @@ the popup.
    distance. On load it also asks the service worker to **prefetch** the lookup.
 2. **Service worker** reverse-geocodes the pin via Nominatim, and uses the
    shared TfL client (`shared/tfl`) for nearby stops (~1.5 mi) plus walking
-   routes for the nearest stations. Completed lookups are stored in
-   `chrome.storage.session` (keyed by lat/lon) so the popup can reuse them.
+   routes for the nearest stations. Crow-flies stations are cached and shown
+   first; walking times arrive in a follow-up update. Completed lookups are
+   stored in `chrome.storage.session` (keyed by lat/lon) so the popup can reuse
+   them.
 3. **Popup** shows lat/long first, then an editable address (from the pin), then
    stations. You can override the address and re-run the lookup, or reset to the
    map pin.

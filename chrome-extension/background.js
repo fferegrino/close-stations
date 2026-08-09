@@ -186,6 +186,7 @@ async function getWalkingRoutes(origin, stations, options = {}) {
 /**
 * Extension service worker: pin lookup via shared TfL client + Nominatim reverse geocode.
 * Prefetches from the content script and caches results in chrome.storage.session.
+* Publishes crow-flies stations first, then walking enrichment.
 */
 /** In-flight lookups keyed by rounded lat/lon so popup and prefetch share work. */
 var inflight = /* @__PURE__ */ new Map();
@@ -201,10 +202,18 @@ async function readSessionCache(key) {
 	const result = entry;
 	if (!Array.isArray(result.stations)) return null;
 	if (!Number.isFinite(result.latitude) || !Number.isFinite(result.longitude)) return null;
+	if (result.status !== "stations" && result.status !== "complete") return null;
 	return result;
 }
 async function writeSessionCache(key, result) {
 	await chrome.storage.session.set({ [sessionKey(key)]: result });
+}
+function broadcastLookupUpdated(result) {
+	chrome.runtime.sendMessage({
+		type: "LOOKUP_UPDATED",
+		ok: true,
+		...result
+	}).catch(() => {});
 }
 async function loadTflAuth() {
 	const { tflAppKey, tflAppId } = await chrome.storage.sync.get(["tflAppKey", "tflAppId"]);
@@ -213,14 +222,15 @@ async function loadTflAuth() {
 		appId: typeof tflAppId === "string" ? tflAppId : void 0
 	};
 }
-async function enrichWithNearbyStations(latitude, longitude) {
-	const origin = {
-		lat: latitude,
-		lon: longitude
-	};
-	const auth = await loadTflAuth();
-	const stations = (await findNearbyStations(origin, { auth })).filter((s) => s.modes.length > 0);
-	const routes = await getWalkingRoutes(origin, stations, { auth });
+function withoutWalking(stations) {
+	return stations.slice(0, 8).map((s) => ({
+		...s,
+		walkingDurationMinutes: null,
+		walkingDistanceMetres: null,
+		walkingPath: []
+	}));
+}
+function applyWalkingRoutes(stations, routes) {
 	const enriched = [];
 	for (const station of stations.slice(0, 8)) {
 		const route = routes.get(station.id);
@@ -233,12 +243,7 @@ async function enrichWithNearbyStations(latitude, longitude) {
 			walkingPath: route.path
 		});
 	}
-	if (!enriched.length) return stations.slice(0, 8).map((s) => ({
-		...s,
-		walkingDurationMinutes: null,
-		walkingDistanceMetres: null,
-		walkingPath: []
-	}));
+	if (!enriched.length) return withoutWalking(stations);
 	return enriched;
 }
 function formatPinAddress(addr) {
@@ -280,37 +285,84 @@ async function reverseGeocode(latitude, longitude) {
 		pinAddressSource: "nominatim"
 	};
 }
-async function lookupFromCoords(latitude, longitude, addressMeta) {
-	const [stations, geocode] = await Promise.all([enrichWithNearbyStations(latitude, longitude), addressMeta ? Promise.resolve(addressMeta) : reverseGeocode(latitude, longitude).catch(() => ({
+async function fetchStationsAndGeocode(latitude, longitude, addressMeta) {
+	const origin = {
+		lat: latitude,
+		lon: longitude
+	};
+	const auth = await loadTflAuth();
+	const [stations, geocode] = await Promise.all([findNearbyStations(origin, { auth }).then((list) => list.filter((s) => s.modes.length > 0)), addressMeta ? Promise.resolve(addressMeta) : reverseGeocode(latitude, longitude).catch(() => ({
 		pinAddress: null,
 		pinAddressFull: null,
 		pinAddressSource: null
 	}))]);
 	return {
-		latitude,
-		longitude,
 		stations,
-		...geocode
+		geocode
 	};
+}
+async function enrichWalking(key, partial, baseStations) {
+	const routes = await getWalkingRoutes({
+		lat: partial.latitude,
+		lon: partial.longitude
+	}, baseStations, { auth: await loadTflAuth() });
+	const complete = {
+		...partial,
+		stations: applyWalkingRoutes(baseStations, routes),
+		status: "complete"
+	};
+	await writeSessionCache(key, complete);
+	broadcastLookupUpdated(complete);
+	return complete;
 }
 /**
 * Return a cached lookup, join an in-flight one, or start a fresh TfL/Nominatim run.
+* `stations` resolves as soon as crow-flies results exist; `done` waits for walks.
 */
 function ensureLookup(latitude, longitude, addressMeta) {
 	const key = coordsKey(latitude, longitude);
 	const existing = inflight.get(key);
 	if (existing) return existing;
-	const promise = (async () => {
-		const cached = await readSessionCache(key);
-		if (cached) return cached;
-		const result = await lookupFromCoords(latitude, longitude, addressMeta);
-		await writeSessionCache(key, result);
-		return result;
-	})().finally(() => {
-		inflight.delete(key);
-	});
-	inflight.set(key, promise);
-	return promise;
+	let resolveStations;
+	let rejectStations;
+	const handle = {
+		stations: new Promise((resolve, reject) => {
+			resolveStations = resolve;
+			rejectStations = reject;
+		}),
+		done: (async () => {
+			try {
+				const cached = await readSessionCache(key);
+				if (cached?.status === "complete") {
+					resolveStations(cached);
+					return cached;
+				}
+				if (cached?.status === "stations") {
+					resolveStations(cached);
+					return enrichWalking(key, cached, cached.stations);
+				}
+				const { stations, geocode } = await fetchStationsAndGeocode(latitude, longitude, addressMeta);
+				const partial = {
+					latitude,
+					longitude,
+					stations: withoutWalking(stations),
+					...geocode,
+					status: "stations"
+				};
+				await writeSessionCache(key, partial);
+				resolveStations(partial);
+				broadcastLookupUpdated(partial);
+				return enrichWalking(key, partial, stations);
+			} catch (err) {
+				rejectStations(err);
+				throw err;
+			}
+		})().finally(() => {
+			inflight.delete(key);
+		})
+	};
+	inflight.set(key, handle);
+	return handle;
 }
 /**
 * Forward-geocode an address (Greater London) then run the usual station lookup.
@@ -342,13 +394,55 @@ async function geocodeAddress(address) {
 		pinAddressSource: "nominatim-search"
 	};
 }
-async function lookupFromAddress(address) {
-	const geocoded = await geocodeAddress(address);
-	return lookupFromCoords(geocoded.latitude, geocoded.longitude, {
-		pinAddress: geocoded.pinAddress,
-		pinAddressFull: geocoded.pinAddressFull,
-		pinAddressSource: geocoded.pinAddressSource
-	});
+/**
+* Address overrides skip the pin cache and still publish progressive updates.
+* Resolves `stations` as soon as crow-flies results exist.
+*/
+function lookupFromAddress(address) {
+	let resolveStations;
+	let rejectStations;
+	return {
+		stations: new Promise((resolve, reject) => {
+			resolveStations = resolve;
+			rejectStations = reject;
+		}),
+		done: (async () => {
+			try {
+				const geocoded = await geocodeAddress(address);
+				const latitude = geocoded.latitude;
+				const longitude = geocoded.longitude;
+				const { stations, geocode } = await fetchStationsAndGeocode(latitude, longitude, {
+					pinAddress: geocoded.pinAddress,
+					pinAddressFull: geocoded.pinAddressFull,
+					pinAddressSource: geocoded.pinAddressSource
+				});
+				const partial = {
+					latitude,
+					longitude,
+					stations: withoutWalking(stations),
+					...geocode,
+					status: "stations"
+				};
+				resolveStations(partial);
+				broadcastLookupUpdated(partial);
+				const auth = await loadTflAuth();
+				const routes = await getWalkingRoutes({
+					lat: latitude,
+					lon: longitude
+				}, stations, { auth });
+				const complete = {
+					...partial,
+					stations: applyWalkingRoutes(stations, routes),
+					status: "complete"
+				};
+				broadcastLookupUpdated(complete);
+				return complete;
+			} catch (err) {
+				rejectStations(err);
+				throw err;
+			}
+		})()
+	};
 }
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 	if (message?.type === "PREFETCH_LOOKUP") {
@@ -361,7 +455,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 			});
 			return;
 		}
-		ensureLookup(latitude, longitude).then(() => sendResponse({
+		ensureLookup(latitude, longitude).done.then(() => sendResponse({
 			ok: true,
 			started: true
 		})).catch((err) => sendResponse({
@@ -380,7 +474,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 			});
 			return;
 		}
-		ensureLookup(latitude, longitude).then((result) => sendResponse({
+		ensureLookup(latitude, longitude).stations.then((result) => sendResponse({
 			ok: true,
 			...result
 		})).catch((err) => sendResponse({
@@ -390,7 +484,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 		return true;
 	}
 	if (message?.type === "LOOKUP_FROM_ADDRESS") {
-		lookupFromAddress(String(message.address ?? "")).then((result) => sendResponse({
+		lookupFromAddress(String(message.address ?? "")).stations.then((result) => sendResponse({
 			ok: true,
 			...result,
 			overridden: true

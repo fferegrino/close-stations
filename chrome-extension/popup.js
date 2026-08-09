@@ -13,6 +13,8 @@ const keySaved = document.getElementById("key-saved");
 
 /** @type {{ latitude: number, longitude: number, address: string | null } | null} */
 let pinOrigin = null;
+/** Coords for the lookup currently shown (pin or address override). */
+let activeLookup = null;
 let usingOverride = false;
 
 const LINE_COLORS = {
@@ -72,14 +74,20 @@ function showCoords(latitude, longitude) {
   coordsEl.textContent = `${Number(latitude).toFixed(5)}, ${Number(longitude).toFixed(5)}`;
 }
 
-function setAddressUi({ address, overridden }) {
+function setAddressUi({ address, overridden, walksPending = false }) {
   addressForm.hidden = false;
   addressInput.value = address || "";
   usingOverride = Boolean(overridden);
   addressReset.hidden = !usingOverride;
-  addressHint.textContent = usingOverride
-    ? "Using your address override (stations recalculated)."
-    : "From map pin — edit to override, then Look up.";
+  if (walksPending) {
+    addressHint.textContent = usingOverride
+      ? "Using your address override — fetching walking times…"
+      : "From map pin — fetching walking times…";
+  } else {
+    addressHint.textContent = usingOverride
+      ? "Using your address override (stations recalculated)."
+      : "From map pin — edit to override, then Look up.";
+  }
 }
 
 function setLookupBusy(busy, busyLabel = "Looking up…") {
@@ -107,6 +115,14 @@ function formatMetres(m) {
   if (m == null || !Number.isFinite(m)) return null;
   if (m < 1000) return `${Math.round(m)} m`;
   return `${(m / 1000).toFixed(1)} km`;
+}
+
+function sameCoords(a, b) {
+  if (!a || !b) return false;
+  return (
+    Math.abs(Number(a.latitude) - Number(b.latitude)) < 1e-5 &&
+    Math.abs(Number(a.longitude) - Number(b.longitude)) < 1e-5
+  );
 }
 
 function renderStations(stations) {
@@ -143,6 +159,14 @@ function renderStations(stations) {
         dist.textContent = ` (${walkDist})`;
         walk.append(dist);
       }
+    } else {
+      const crow = formatMetres(station.distanceMetres);
+      if (crow) {
+        const dist = document.createElement("span");
+        dist.className = "walk-dist";
+        dist.textContent = `${crow} away`;
+        walk.append(dist);
+      }
     }
 
     top.append(name, walk);
@@ -170,10 +194,15 @@ function renderStations(stations) {
 }
 
 function applyLookupResult(result, { overridden }) {
+  activeLookup = {
+    latitude: result.latitude,
+    longitude: result.longitude,
+  };
   showCoords(result.latitude, result.longitude);
   setAddressUi({
     address: result.pinAddress || result.pinAddressFull || "",
     overridden,
+    walksPending: result.status === "stations",
   });
   renderStations(result.stations || []);
 }
@@ -233,6 +262,12 @@ async function loadKeys() {
   if (tflAppId) idInput.value = tflAppId;
 }
 
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type !== "LOOKUP_UPDATED" || !message.ok) return;
+  if (!sameCoords(activeLookup, message)) return;
+  applyLookupResult(message, { overridden: usingOverride });
+});
+
 saveBtn.addEventListener("click", async () => {
   await chrome.storage.sync.set({
     tflAppKey: keyInput.value.trim(),
@@ -260,9 +295,9 @@ addressForm.addEventListener("submit", async (event) => {
       return;
     }
     applyLookupResult(result, { overridden: true });
+    setLookupBusy(false);
   } catch (err) {
     setStatus(err?.message || "Lookup failed.", "error");
-  } finally {
     setLookupBusy(false);
   }
 });
@@ -280,9 +315,9 @@ addressReset.addEventListener("click", async () => {
       return;
     }
     applyLookupResult(result, { overridden: false });
+    setLookupBusy(false);
   } catch (err) {
     setStatus(err?.message || "Lookup failed.", "error");
-  } finally {
     setLookupBusy(false);
   }
 });
@@ -321,6 +356,10 @@ async function main() {
     latitude: coords.latitude,
     longitude: coords.longitude,
     address: null,
+  };
+  activeLookup = {
+    latitude: coords.latitude,
+    longitude: coords.longitude,
   };
 
   // Lat/long from the map pin drives the initial lookup.
