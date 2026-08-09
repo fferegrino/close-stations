@@ -1,5 +1,6 @@
 /**
  * Extension service worker: pin lookup via shared TfL client + Nominatim reverse geocode.
+ * Prefetches from the content script and caches results in chrome.storage.session.
  */
 
 /// <reference types="chrome" />
@@ -17,6 +18,45 @@ interface EnrichedStation extends Station {
   walkingDurationMinutes: number | null
   walkingDistanceMetres: number | null
   walkingPath: [number, number][]
+}
+
+interface AddressMeta {
+  pinAddress: string | null
+  pinAddressFull: string | null
+  pinAddressSource: string | null
+}
+
+interface LookupResult extends AddressMeta {
+  latitude: number
+  longitude: number
+  stations: EnrichedStation[]
+}
+
+/** In-flight lookups keyed by rounded lat/lon so popup and prefetch share work. */
+const inflight = new Map<string, Promise<LookupResult>>()
+
+function coordsKey(latitude: number, longitude: number): string {
+  return `${Number(latitude).toFixed(5)},${Number(longitude).toFixed(5)}`
+}
+
+function sessionKey(key: string): string {
+  return `lookup:${key}`
+}
+
+async function readSessionCache(key: string): Promise<LookupResult | null> {
+  const stored = await chrome.storage.session.get(sessionKey(key))
+  const entry = stored[sessionKey(key)]
+  if (!entry || typeof entry !== 'object') return null
+  const result = entry as LookupResult
+  if (!Array.isArray(result.stations)) return null
+  if (!Number.isFinite(result.latitude) || !Number.isFinite(result.longitude)) {
+    return null
+  }
+  return result
+}
+
+async function writeSessionCache(key: string, result: LookupResult): Promise<void> {
+  await chrome.storage.session.set({ [sessionKey(key)]: result })
 }
 
 async function loadTflAuth(): Promise<TflAuth> {
@@ -132,12 +172,8 @@ async function reverseGeocode(latitude: number, longitude: number) {
 async function lookupFromCoords(
   latitude: number,
   longitude: number,
-  addressMeta?: {
-    pinAddress: string | null
-    pinAddressFull: string | null
-    pinAddressSource: string | null
-  },
-) {
+  addressMeta?: AddressMeta,
+): Promise<LookupResult> {
   const [stations, geocode] = await Promise.all([
     enrichWithNearbyStations(latitude, longitude),
     addressMeta
@@ -154,6 +190,33 @@ async function lookupFromCoords(
     stations,
     ...geocode,
   }
+}
+
+/**
+ * Return a cached lookup, join an in-flight one, or start a fresh TfL/Nominatim run.
+ */
+function ensureLookup(
+  latitude: number,
+  longitude: number,
+  addressMeta?: AddressMeta,
+): Promise<LookupResult> {
+  const key = coordsKey(latitude, longitude)
+  const existing = inflight.get(key)
+  if (existing) return existing
+
+  const promise = (async () => {
+    const cached = await readSessionCache(key)
+    if (cached) return cached
+
+    const result = await lookupFromCoords(latitude, longitude, addressMeta)
+    await writeSessionCache(key, result)
+    return result
+  })().finally(() => {
+    inflight.delete(key)
+  })
+
+  inflight.set(key, promise)
+  return promise
 }
 
 /**
@@ -202,6 +265,7 @@ async function geocodeAddress(address: string) {
 
 async function lookupFromAddress(address: string) {
   const geocoded = await geocodeAddress(address)
+  // Bypass pin cache: override coords may differ from the listing pin.
   return lookupFromCoords(geocoded.latitude, geocoded.longitude, {
     pinAddress: geocoded.pinAddress,
     pinAddressFull: geocoded.pinAddressFull,
@@ -210,6 +274,26 @@ async function lookupFromAddress(address: string) {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === 'PREFETCH_LOOKUP') {
+    const latitude = Number(message.latitude)
+    const longitude = Number(message.longitude)
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      sendResponse({ ok: false, error: 'Missing coordinates.' })
+      return
+    }
+
+    ensureLookup(latitude, longitude)
+      .then(() => sendResponse({ ok: true, started: true }))
+      .catch((err: unknown) =>
+        sendResponse({
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      )
+
+    return true
+  }
+
   if (message?.type === 'LOOKUP_FROM_COORDS') {
     const latitude = Number(message.latitude)
     const longitude = Number(message.longitude)
@@ -218,7 +302,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return
     }
 
-    lookupFromCoords(latitude, longitude)
+    ensureLookup(latitude, longitude)
       .then((result) => sendResponse({ ok: true, ...result }))
       .catch((err: unknown) =>
         sendResponse({

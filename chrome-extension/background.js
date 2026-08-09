@@ -185,7 +185,27 @@ async function getWalkingRoutes(origin, stations, options = {}) {
 //#region chrome-extension/background.ts
 /**
 * Extension service worker: pin lookup via shared TfL client + Nominatim reverse geocode.
+* Prefetches from the content script and caches results in chrome.storage.session.
 */
+/** In-flight lookups keyed by rounded lat/lon so popup and prefetch share work. */
+var inflight = /* @__PURE__ */ new Map();
+function coordsKey(latitude, longitude) {
+	return `${Number(latitude).toFixed(5)},${Number(longitude).toFixed(5)}`;
+}
+function sessionKey(key) {
+	return `lookup:${key}`;
+}
+async function readSessionCache(key) {
+	const entry = (await chrome.storage.session.get(sessionKey(key)))[sessionKey(key)];
+	if (!entry || typeof entry !== "object") return null;
+	const result = entry;
+	if (!Array.isArray(result.stations)) return null;
+	if (!Number.isFinite(result.latitude) || !Number.isFinite(result.longitude)) return null;
+	return result;
+}
+async function writeSessionCache(key, result) {
+	await chrome.storage.session.set({ [sessionKey(key)]: result });
+}
 async function loadTflAuth() {
 	const { tflAppKey, tflAppId } = await chrome.storage.sync.get(["tflAppKey", "tflAppId"]);
 	return {
@@ -274,6 +294,25 @@ async function lookupFromCoords(latitude, longitude, addressMeta) {
 	};
 }
 /**
+* Return a cached lookup, join an in-flight one, or start a fresh TfL/Nominatim run.
+*/
+function ensureLookup(latitude, longitude, addressMeta) {
+	const key = coordsKey(latitude, longitude);
+	const existing = inflight.get(key);
+	if (existing) return existing;
+	const promise = (async () => {
+		const cached = await readSessionCache(key);
+		if (cached) return cached;
+		const result = await lookupFromCoords(latitude, longitude, addressMeta);
+		await writeSessionCache(key, result);
+		return result;
+	})().finally(() => {
+		inflight.delete(key);
+	});
+	inflight.set(key, promise);
+	return promise;
+}
+/**
 * Forward-geocode an address (Greater London) then run the usual station lookup.
 */
 async function geocodeAddress(address) {
@@ -312,6 +351,25 @@ async function lookupFromAddress(address) {
 	});
 }
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+	if (message?.type === "PREFETCH_LOOKUP") {
+		const latitude = Number(message.latitude);
+		const longitude = Number(message.longitude);
+		if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+			sendResponse({
+				ok: false,
+				error: "Missing coordinates."
+			});
+			return;
+		}
+		ensureLookup(latitude, longitude).then(() => sendResponse({
+			ok: true,
+			started: true
+		})).catch((err) => sendResponse({
+			ok: false,
+			error: err instanceof Error ? err.message : String(err)
+		}));
+		return true;
+	}
 	if (message?.type === "LOOKUP_FROM_COORDS") {
 		const latitude = Number(message.latitude);
 		const longitude = Number(message.longitude);
@@ -322,7 +380,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 			});
 			return;
 		}
-		lookupFromCoords(latitude, longitude).then((result) => sendResponse({
+		ensureLookup(latitude, longitude).then((result) => sendResponse({
 			ok: true,
 			...result
 		})).catch((err) => sendResponse({

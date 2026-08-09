@@ -283,3 +283,28 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ ok: false, error: err?.message || String(err) });
   }
 });
+
+/**
+ * Kick off TfL/Nominatim work as soon as a listing page loads so the popup
+ * can often read a warm session cache instead of waiting on a cold click.
+ */
+function prefetchLookup() {
+  try {
+    const result = extractCoords();
+    if (!result) return;
+    chrome.runtime
+      .sendMessage({
+        type: "PREFETCH_LOOKUP",
+        latitude: result.latitude,
+        longitude: result.longitude,
+        url: location.href,
+      })
+      .catch(() => {
+        /* extension context may be unavailable during reload */
+      });
+  } catch {
+    /* ignore parse errors on non-listing pages */
+  }
+}
+
+prefetchLookup();
