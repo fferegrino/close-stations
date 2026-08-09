@@ -67,6 +67,9 @@ The app is a static Vite build and deploys automatically via GitHub Actions on p
 2. After the first successful workflow run, the site is at:
    https://fferegrino.github.io/close-stations/
 
+Privacy policy (for the Chrome Web Store):  
+https://fferegrino.github.io/close-stations/privacy.html
+
 ## Stack
 
 - [Vite](https://vite.dev/) + [React](https://react.dev/) + TypeScript

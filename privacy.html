@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy — Close Stations</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1a1f24;
+        --muted: #5a6570;
+        --line: #d8dee4;
+        --bg: #f7f5f1;
+        --card: #ffffff;
+        --accent: #0b5fff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+          serif;
+        background:
+          radial-gradient(1200px 600px at 10% -10%, #e8eef8 0%, transparent 55%),
+          radial-gradient(900px 500px at 100% 0%, #f0e8dc 0%, transparent 50%),
+          var(--bg);
+        color: var(--ink);
+        line-height: 1.55;
+      }
+
+      main {
+        max-width: 42rem;
+        margin: 0 auto;
+        padding: 3rem 1.25rem 4rem;
+      }
+
+      h1 {
+        font-size: clamp(1.8rem, 4vw, 2.4rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin: 0 0 0.35rem;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.9rem;
+        margin: 0 0 2rem;
+      }
+
+      h2 {
+        font-size: 1.15rem;
+        margin: 1.75rem 0 0.6rem;
+      }
+
+      p,
+      li {
+        font-size: 1.02rem;
+      }
+
+      ul {
+        padding-left: 1.2rem;
+      }
+
+      li + li {
+        margin-top: 0.35rem;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      footer {
+        margin-top: 2.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Privacy Policy</h1>
+      <p class="meta">Close Stations · Last updated: 9 August 2026</p>
+
+      <p>
+        Close Stations helps you see nearby Transport for London (TfL) stations
+        and walking times from a UK property listing map pin (Rightmove, Zoopla,
+        or OnTheMarket). This policy explains what data the Chrome extension and
+        related web app use.
+      </p>
+
+      <h2>What we access</h2>
+      <ul>
+        <li>
+          When you open the extension on a supported listing page, it reads the
+          <strong>map pin coordinates</strong> (latitude and longitude) from that
+          page. It does not read your account details, saved searches, or other
+          personal listing data.
+        </li>
+        <li>
+          Those coordinates are used only to look up nearby stations, walking
+          routes, and an optional reverse-geocoded address label.
+        </li>
+      </ul>
+
+      <h2>What we send to third parties</h2>
+      <ul>
+        <li>
+          <strong>Transport for London</strong>
+          (<a href="https://api.tfl.gov.uk/">api.tfl.gov.uk</a>) — nearby stop
+          search and walking journey results.
+        </li>
+        <li>
+          <strong>OpenStreetMap Nominatim</strong>
+          (<a href="https://nominatim.openstreetmap.org/"
+            >nominatim.openstreetmap.org</a
+          >)
+          — reverse geocoding of the pin to a display address. Coordinates remain
+          the source of truth for distances; the address is for display only.
+        </li>
+      </ul>
+      <p>
+        Requests are made directly from your browser. We do not operate a backend
+        that receives or stores your coordinates.
+      </p>
+
+      <h2>What we store</h2>
+      <ul>
+        <li>
+          Optionally, a TfL API key and app ID you enter in the extension popup.
+          These are saved in <code>chrome.storage.sync</code> on your device (and
+          may sync with your Chrome profile). They are sent only to TfL as API
+          credentials.
+        </li>
+        <li>
+          We do not create accounts, sell data, or store browsing history,
+          listing content, or personal property details.
+        </li>
+      </ul>
+
+      <h2>Permissions</h2>
+      <p>
+        The extension uses <code>activeTab</code>, <code>storage</code>, and
+        <code>scripting</code>, plus host access limited to the listing sites
+        above and the TfL / Nominatim APIs, solely for the features described
+        here.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions about this policy:
+        <a href="https://github.com/fferegrino/close-stations/issues"
+          >open an issue on GitHub</a
+        >.
+      </p>
+
+      <footer>
+        Close Stations is provided as-is. Third-party services (TfL, Nominatim,
+        property portals) have their own privacy policies.
+      </footer>
+    </main>
+  </body>
+</html>
