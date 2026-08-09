@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Close Stations</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Close Stations</h1>
+      <p id="coords" class="coords">—</p>
+      <p id="pin-address" class="pin-address muted" hidden></p>
+    </header>
+
+    <main>
+      <div id="status" class="status" hidden></div>
+      <ul id="stations" class="stations" hidden></ul>
+    </main>
+
+    <details class="settings">
+      <summary>TfL API key (optional)</summary>
+      <p class="muted">Anonymous calls work for light use. A key raises rate limits.</p>
+      <label>
+        App key
+        <input id="tfl-key" type="password" autocomplete="off" placeholder="TFL_APP_KEY" />
+      </label>
+      <label>
+        App id
+        <input id="tfl-id" type="text" autocomplete="off" placeholder="optional" />
+      </label>
+      <button id="save-key" type="button">Save</button>
+      <p id="key-saved" class="muted" hidden>Saved.</p>
+    </details>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
