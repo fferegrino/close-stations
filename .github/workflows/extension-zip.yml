@@ -1,0 +1,67 @@
+name: Package Chrome Extension
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'extension-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension service worker
+        run: npm run build:extension
+
+      - name: Stage and zip for Chrome Web Store
+        id: zip
+        run: |
+          set -euo pipefail
+          VERSION=$(jq -r .version chrome-extension/manifest.json)
+          NAME="close-stations-extension-${VERSION}"
+          STAGE="${RUNNER_TEMP}/${NAME}"
+
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE/icons"
+
+          cp chrome-extension/manifest.json \
+            chrome-extension/background.js \
+            chrome-extension/content.js \
+            chrome-extension/popup.html \
+            chrome-extension/popup.js \
+            chrome-extension/popup.css \
+            "$STAGE/"
+          cp chrome-extension/icons/*.png "$STAGE/icons/"
+
+          # Zip contents at the root (manifest.json must not be nested).
+          (
+            cd "$STAGE"
+            zip -r "${GITHUB_WORKSPACE}/${NAME}.zip" .
+          )
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "artifact=${NAME}.zip" >> "$GITHUB_OUTPUT"
+          unzip -l "${NAME}.zip"
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: close-stations-extension-${{ steps.zip.outputs.version }}
+          path: ${{ steps.zip.outputs.artifact }}
+          if-no-files-found: error
+          retention-days: 90
