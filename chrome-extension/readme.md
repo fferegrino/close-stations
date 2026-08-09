@@ -13,11 +13,14 @@ From the repo root:
 npm run pack:extension
 ```
 
-That writes `close-stations-extension-<version>.zip` (version from `manifest.json`).
-Upload that zip in the [Chrome Developer Dashboard](https://chrome.google.com/webstore/devconsole).
+That writes `close-stations-extension-<version>.zip` with **`manifest.json` at the
+zip root**. Upload that file in the
+[Chrome Developer Dashboard](https://chrome.google.com/webstore/devconsole).
 
-Or run the **Package Chrome Extension** GitHub Action (`workflow_dispatch`, or push a
-tag like `extension-v0.2.0`) and download the artifact from the run.
+Or run the **Package Chrome Extension** GitHub Action, then download the artifact
+and upload **that** zip as-is. Do not re-zip the folder, and do not upload an
+inner nested zip — the store needs `manifest.json` in the top level of the
+archive.
 
 ## Load unpacked
 

@@ -28,13 +28,13 @@ jobs:
       - name: Build extension service worker
         run: npm run build:extension
 
-      - name: Stage and zip for Chrome Web Store
-        id: zip
+      - name: Stage store package
+        id: package
         run: |
           set -euo pipefail
           VERSION=$(jq -r .version chrome-extension/manifest.json)
-          NAME="close-stations-extension-${VERSION}"
-          STAGE="${RUNNER_TEMP}/${NAME}"
+          # Workspace-relative so upload-artifact paths stay simple.
+          STAGE="${GITHUB_WORKSPACE}/extension-package"
 
           rm -rf "$STAGE"
           mkdir -p "$STAGE/icons"
@@ -48,20 +48,18 @@ jobs:
             "$STAGE/"
           cp chrome-extension/icons/*.png "$STAGE/icons/"
 
-          # Zip contents at the root (manifest.json must not be nested).
-          (
-            cd "$STAGE"
-            zip -r "${GITHUB_WORKSPACE}/${NAME}.zip" .
-          )
+          test -f "$STAGE/manifest.json"
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "artifact=${NAME}.zip" >> "$GITHUB_OUTPUT"
-          unzip -l "${NAME}.zip"
+          echo "Staged files:"
+          find "$STAGE" -type f | sort
 
-      - name: Upload zip artifact
+      - name: Upload Chrome Web Store package
         uses: actions/upload-artifact@v7
         with:
-          name: close-stations-extension-${{ steps.zip.outputs.version }}
-          path: ${{ steps.zip.outputs.artifact }}
+          # Downloading this artifact yields a zip with manifest.json at the root
+          # (do not upload a pre-zipped file — GitHub would nest it).
+          name: close-stations-extension-${{ steps.package.outputs.version }}
+          path: extension-package/
           if-no-files-found: error
           retention-days: 90
