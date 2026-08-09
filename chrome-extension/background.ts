@@ -129,14 +129,24 @@ async function reverseGeocode(latitude: number, longitude: number) {
   }
 }
 
-async function lookupFromCoords(latitude: number, longitude: number) {
+async function lookupFromCoords(
+  latitude: number,
+  longitude: number,
+  addressMeta?: {
+    pinAddress: string | null
+    pinAddressFull: string | null
+    pinAddressSource: string | null
+  },
+) {
   const [stations, geocode] = await Promise.all([
     enrichWithNearbyStations(latitude, longitude),
-    reverseGeocode(latitude, longitude).catch(() => ({
-      pinAddress: null,
-      pinAddressFull: null,
-      pinAddressSource: null,
-    })),
+    addressMeta
+      ? Promise.resolve(addressMeta)
+      : reverseGeocode(latitude, longitude).catch(() => ({
+          pinAddress: null,
+          pinAddressFull: null,
+          pinAddressSource: null,
+        })),
   ])
   return {
     latitude,
@@ -146,24 +156,91 @@ async function lookupFromCoords(latitude: number, longitude: number) {
   }
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== 'LOOKUP_FROM_COORDS') return
+/**
+ * Forward-geocode an address (Greater London) then run the usual station lookup.
+ */
+async function geocodeAddress(address: string) {
+  const query = address.trim()
+  if (!query) throw new Error('Enter an address.')
 
-  const latitude = Number(message.latitude)
-  const longitude = Number(message.longitude)
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    sendResponse({ ok: false, error: 'Missing coordinates.' })
-    return
+  // Greater London: minLon, maxLat, maxLon, minLat
+  const params = new URLSearchParams({
+    q: query,
+    format: 'jsonv2',
+    limit: '1',
+    viewbox: '-0.5103,51.6919,0.3340,51.2868',
+    bounded: '1',
+    countrycodes: 'gb',
+  })
+  const url = `https://nominatim.openstreetmap.org/search?${params}`
+  const resp = await fetch(url, {
+    headers: {
+      Accept: 'application/json',
+      'Accept-Language': 'en-GB,en;q=0.9',
+    },
+  })
+  if (!resp.ok) {
+    throw new Error(`Nominatim HTTP ${resp.status}`)
+  }
+  const results = (await resp.json()) as Array<{
+    lat: string
+    lon: string
+    display_name: string
+  }>
+  if (!results.length) {
+    throw new Error('Address not found in London. Try being more specific.')
+  }
+  const first = results[0]
+  return {
+    latitude: Number(first.lat),
+    longitude: Number(first.lon),
+    pinAddress: first.display_name,
+    pinAddressFull: first.display_name,
+    pinAddressSource: 'nominatim-search' as const,
+  }
+}
+
+async function lookupFromAddress(address: string) {
+  const geocoded = await geocodeAddress(address)
+  return lookupFromCoords(geocoded.latitude, geocoded.longitude, {
+    pinAddress: geocoded.pinAddress,
+    pinAddressFull: geocoded.pinAddressFull,
+    pinAddressSource: geocoded.pinAddressSource,
+  })
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === 'LOOKUP_FROM_COORDS') {
+    const latitude = Number(message.latitude)
+    const longitude = Number(message.longitude)
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      sendResponse({ ok: false, error: 'Missing coordinates.' })
+      return
+    }
+
+    lookupFromCoords(latitude, longitude)
+      .then((result) => sendResponse({ ok: true, ...result }))
+      .catch((err: unknown) =>
+        sendResponse({
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      )
+
+    return true
   }
 
-  lookupFromCoords(latitude, longitude)
-    .then((result) => sendResponse({ ok: true, ...result }))
-    .catch((err: unknown) =>
-      sendResponse({
-        ok: false,
-        error: err instanceof Error ? err.message : String(err),
-      }),
-    )
+  if (message?.type === 'LOOKUP_FROM_ADDRESS') {
+    const address = String(message.address ?? '')
+    lookupFromAddress(address)
+      .then((result) => sendResponse({ ok: true, ...result, overridden: true }))
+      .catch((err: unknown) =>
+        sendResponse({
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      )
 
-  return true // keep channel open for async response
+    return true
+  }
 })

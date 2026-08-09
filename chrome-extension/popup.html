@@ -10,7 +10,25 @@
     <header>
       <h1>Close Stations</h1>
       <p id="coords" class="coords">—</p>
-      <p id="pin-address" class="pin-address muted" hidden></p>
+      <form id="address-form" class="address-form">
+        <label class="address-field">
+          <span class="address-field-label">Address</span>
+          <input
+            id="address-input"
+            type="text"
+            autocomplete="street-address"
+            placeholder="Street, area, or postcode"
+            disabled
+          />
+        </label>
+        <div class="address-actions">
+          <button type="submit" id="address-apply" disabled>
+            Looking up pin address &amp; TfL stations…
+          </button>
+          <button type="button" id="address-reset" hidden>Use map pin</button>
+        </div>
+        <p id="address-hint" class="address-hint muted"></p>
+      </form>
     </header>
 
     <main>

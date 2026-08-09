@@ -1,11 +1,19 @@
 const coordsEl = document.getElementById("coords");
-const pinAddressEl = document.getElementById("pin-address");
+const addressForm = document.getElementById("address-form");
+const addressInput = document.getElementById("address-input");
+const addressApply = document.getElementById("address-apply");
+const addressReset = document.getElementById("address-reset");
+const addressHint = document.getElementById("address-hint");
 const statusEl = document.getElementById("status");
 const stationsEl = document.getElementById("stations");
 const keyInput = document.getElementById("tfl-key");
 const idInput = document.getElementById("tfl-id");
 const saveBtn = document.getElementById("save-key");
 const keySaved = document.getElementById("key-saved");
+
+/** @type {{ latitude: number, longitude: number, address: string | null } | null} */
+let pinOrigin = null;
+let usingOverride = false;
 
 const MODE_LABELS = {
   tube: "Tube",
@@ -32,14 +40,26 @@ function showCoords(latitude, longitude) {
   coordsEl.textContent = `${Number(latitude).toFixed(5)}, ${Number(longitude).toFixed(5)}`;
 }
 
-function showPinAddress(address) {
-  if (!address) {
-    pinAddressEl.hidden = true;
-    pinAddressEl.textContent = "";
-    return;
+function setAddressUi({ address, overridden }) {
+  addressForm.hidden = false;
+  addressInput.value = address || "";
+  usingOverride = Boolean(overridden);
+  addressReset.hidden = !usingOverride;
+  addressHint.textContent = usingOverride
+    ? "Using your address override (stations recalculated)."
+    : "From map pin — edit to override, then Look up.";
+}
+
+function setLookupBusy(busy, busyLabel = "Looking up…") {
+  addressForm.hidden = false;
+  addressApply.disabled = busy;
+  addressReset.disabled = busy;
+  addressInput.disabled = busy;
+  addressApply.textContent = busy ? busyLabel : "Look up";
+  if (busy) {
+    statusEl.hidden = true;
+    stationsEl.hidden = true;
   }
-  pinAddressEl.hidden = false;
-  pinAddressEl.textContent = `Pin ≈ ${address}`;
 }
 
 function shortName(name) {
@@ -133,6 +153,30 @@ function renderStations(stations) {
   }
 }
 
+function applyLookupResult(result, { overridden }) {
+  showCoords(result.latitude, result.longitude);
+  setAddressUi({
+    address: result.pinAddress || result.pinAddressFull || "",
+    overridden,
+  });
+  renderStations(result.stations || []);
+}
+
+async function lookupFromCoords(latitude, longitude) {
+  return chrome.runtime.sendMessage({
+    type: "LOOKUP_FROM_COORDS",
+    latitude,
+    longitude,
+  });
+}
+
+async function lookupFromAddress(address) {
+  return chrome.runtime.sendMessage({
+    type: "LOOKUP_FROM_ADDRESS",
+    address,
+  });
+}
+
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
@@ -184,12 +228,57 @@ saveBtn.addEventListener("click", async () => {
   }, 1500);
 });
 
+addressForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const address = addressInput.value.trim();
+  if (!address) {
+    setStatus("Enter an address to look up.", "warn");
+    return;
+  }
+
+  setLookupBusy(true, "Geocoding address & looking up stations…");
+  try {
+    const result = await lookupFromAddress(address);
+    if (!result?.ok) {
+      setStatus(result?.error || "Lookup failed.", "error");
+      return;
+    }
+    applyLookupResult(result, { overridden: true });
+  } catch (err) {
+    setStatus(err?.message || "Lookup failed.", "error");
+  } finally {
+    setLookupBusy(false);
+  }
+});
+
+addressReset.addEventListener("click", async () => {
+  if (!pinOrigin) return;
+  setLookupBusy(true, "Looking up pin address & TfL stations…");
+  try {
+    const result = await lookupFromCoords(
+      pinOrigin.latitude,
+      pinOrigin.longitude
+    );
+    if (!result?.ok) {
+      setStatus(result?.error || "Lookup failed.", "error");
+      return;
+    }
+    applyLookupResult(result, { overridden: false });
+  } catch (err) {
+    setStatus(err?.message || "Lookup failed.", "error");
+  } finally {
+    setLookupBusy(false);
+  }
+});
+
 async function main() {
   await loadKeys();
-  setStatus("Reading map coordinates…");
+  setLookupBusy(true, "Reading map coordinates…");
 
   const tab = await getActiveTab();
   if (!tab?.id || !supportedUrl(tab.url)) {
+    setLookupBusy(false);
+    addressForm.hidden = true;
     setStatus(
       "Open a Rightmove, Zoopla, or OnTheMarket listing page, then click the extension again.",
       "warn"
@@ -201,38 +290,45 @@ async function main() {
   try {
     coords = await ensureContentScript(tab.id);
   } catch (err) {
+    setLookupBusy(false);
     setStatus(err?.message || "Could not read this page.", "error");
     return;
   }
 
   if (!coords?.ok) {
+    setLookupBusy(false);
     setStatus(coords?.error || "No coordinates found on this page.", "error");
     return;
   }
 
-  // Lat/long from the map pin drives everything — not the marketed street name.
+  pinOrigin = {
+    latitude: coords.latitude,
+    longitude: coords.longitude,
+    address: null,
+  };
+
+  // Lat/long from the map pin drives the initial lookup.
   showCoords(coords.latitude, coords.longitude);
-  setStatus("Looking up pin address & TfL stations…");
+  setLookupBusy(true, "Looking up pin address & TfL stations…");
 
   let result;
   try {
-    result = await chrome.runtime.sendMessage({
-      type: "LOOKUP_FROM_COORDS",
-      latitude: coords.latitude,
-      longitude: coords.longitude,
-    });
+    result = await lookupFromCoords(coords.latitude, coords.longitude);
   } catch (err) {
+    setLookupBusy(false);
     setStatus(err?.message || "Lookup failed.", "error");
     return;
   }
 
   if (!result?.ok) {
+    setLookupBusy(false);
     setStatus(result?.error || "Lookup failed.", "error");
     return;
   }
 
-  showPinAddress(result.pinAddress || result.pinAddressFull);
-  renderStations(result.stations || []);
+  pinOrigin.address = result.pinAddress || result.pinAddressFull || null;
+  applyLookupResult(result, { overridden: false });
+  setLookupBusy(false);
 }
 
 main();

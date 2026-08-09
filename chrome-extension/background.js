@@ -260,8 +260,8 @@ async function reverseGeocode(latitude, longitude) {
 		pinAddressSource: "nominatim"
 	};
 }
-async function lookupFromCoords(latitude, longitude) {
-	const [stations, geocode] = await Promise.all([enrichWithNearbyStations(latitude, longitude), reverseGeocode(latitude, longitude).catch(() => ({
+async function lookupFromCoords(latitude, longitude, addressMeta) {
+	const [stations, geocode] = await Promise.all([enrichWithNearbyStations(latitude, longitude), addressMeta ? Promise.resolve(addressMeta) : reverseGeocode(latitude, longitude).catch(() => ({
 		pinAddress: null,
 		pinAddressFull: null,
 		pinAddressSource: null
@@ -273,25 +273,75 @@ async function lookupFromCoords(latitude, longitude) {
 		...geocode
 	};
 }
+/**
+* Forward-geocode an address (Greater London) then run the usual station lookup.
+*/
+async function geocodeAddress(address) {
+	const query = address.trim();
+	if (!query) throw new Error("Enter an address.");
+	const url = `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
+		q: query,
+		format: "jsonv2",
+		limit: "1",
+		viewbox: "-0.5103,51.6919,0.3340,51.2868",
+		bounded: "1",
+		countrycodes: "gb"
+	})}`;
+	const resp = await fetch(url, { headers: {
+		Accept: "application/json",
+		"Accept-Language": "en-GB,en;q=0.9"
+	} });
+	if (!resp.ok) throw new Error(`Nominatim HTTP ${resp.status}`);
+	const results = await resp.json();
+	if (!results.length) throw new Error("Address not found in London. Try being more specific.");
+	const first = results[0];
+	return {
+		latitude: Number(first.lat),
+		longitude: Number(first.lon),
+		pinAddress: first.display_name,
+		pinAddressFull: first.display_name,
+		pinAddressSource: "nominatim-search"
+	};
+}
+async function lookupFromAddress(address) {
+	const geocoded = await geocodeAddress(address);
+	return lookupFromCoords(geocoded.latitude, geocoded.longitude, {
+		pinAddress: geocoded.pinAddress,
+		pinAddressFull: geocoded.pinAddressFull,
+		pinAddressSource: geocoded.pinAddressSource
+	});
+}
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-	if (message?.type !== "LOOKUP_FROM_COORDS") return;
-	const latitude = Number(message.latitude);
-	const longitude = Number(message.longitude);
-	if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-		sendResponse({
+	if (message?.type === "LOOKUP_FROM_COORDS") {
+		const latitude = Number(message.latitude);
+		const longitude = Number(message.longitude);
+		if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+			sendResponse({
+				ok: false,
+				error: "Missing coordinates."
+			});
+			return;
+		}
+		lookupFromCoords(latitude, longitude).then((result) => sendResponse({
+			ok: true,
+			...result
+		})).catch((err) => sendResponse({
 			ok: false,
-			error: "Missing coordinates."
-		});
-		return;
+			error: err instanceof Error ? err.message : String(err)
+		}));
+		return true;
 	}
-	lookupFromCoords(latitude, longitude).then((result) => sendResponse({
-		ok: true,
-		...result
-	})).catch((err) => sendResponse({
-		ok: false,
-		error: err instanceof Error ? err.message : String(err)
-	}));
-	return true;
+	if (message?.type === "LOOKUP_FROM_ADDRESS") {
+		lookupFromAddress(String(message.address ?? "")).then((result) => sendResponse({
+			ok: true,
+			...result,
+			overridden: true
+		})).catch((err) => sendResponse({
+			ok: false,
+			error: err instanceof Error ? err.message : String(err)
+		}));
+		return true;
+	}
 });
 //#endregion
 

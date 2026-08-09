@@ -104,8 +104,10 @@
           personal listing data.
         </li>
         <li>
-          Those coordinates are used only to look up nearby stations, walking
-          routes, and an optional reverse-geocoded address label.
+          Those coordinates are used to look up nearby stations, walking routes,
+          and an optional reverse-geocoded address label. If you override the
+          address in the popup, the text you enter is forward-geocoded so stations
+          can be recalculated from that location instead.
         </li>
       </ul>
 
@@ -121,8 +123,9 @@
           (<a href="https://nominatim.openstreetmap.org/"
             >nominatim.openstreetmap.org</a
           >)
-          — reverse geocoding of the pin to a display address. Coordinates remain
-          the source of truth for distances; the address is for display only.
+          — reverse geocoding of the pin, and forward geocoding when you override
+          the address. Coordinates used for the lookup remain the source of truth
+          for distances; the address label is for display and override input.
         </li>
       </ul>
       <p>

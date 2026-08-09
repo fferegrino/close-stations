@@ -45,4 +45,6 @@ the popup.
 2. **Service worker** reverse-geocodes the pin via Nominatim, and uses the
    shared TfL client (`shared/tfl`) for nearby stops (~1.5 mi) plus walking
    routes for the nearest stations.
-3. **Popup** shows lat/long first, then `Pin ≈ …` address, then stations.
+3. **Popup** shows lat/long first, then an editable address (from the pin), then
+   stations. You can override the address and re-run the lookup, or reset to the
+   map pin.
