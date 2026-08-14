@@ -1,4 +1,4 @@
-import { MAX_ROUTES, metresToMiles } from '../api/tfl'
+import { MAX_ROUTES, formatZone, metresToMiles } from '../api/tfl'
 import { lineColor, lineTextColor } from '../lineColors'
 import type { Station, WalkingRoute } from '../types'
 
@@ -37,6 +37,7 @@ export default function StationList({
         {stations.map((station) => {
           const route = routes.get(station.id)
           const selected = station.id === selectedStationId
+          const zoneLabel = formatZone(station.zone)
           return (
             <li key={station.id}>
               <button
@@ -46,6 +47,9 @@ export default function StationList({
               >
                 <div className="station-name">{station.name}</div>
                 <div className="station-meta">
+                  {zoneLabel && (
+                    <span className="station-zone">{zoneLabel}</span>
+                  )}
                   <span className="station-distance">
                     {metresToMiles(station.distanceMetres).toFixed(2)} mi
                   </span>

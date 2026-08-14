@@ -29,6 +29,11 @@ async function tflGet(path, params = {}, auth) {
 function titleCaseId(id) {
 	return id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
+/** Travelcard zone from StopPoint additionalProperties, if present. */
+function stationZone(stop) {
+	for (const prop of stop.additionalProperties ?? []) if (prop?.key === "Zone" && prop.value?.trim()) return prop.value.trim();
+	return null;
+}
 /** Prefer non-bus lineModeGroups; fall back to the raw lines list. */
 function stationLines(stop) {
 	const rawLines = stop.lines ?? [];
@@ -97,6 +102,7 @@ async function findNearbyStations(origin, options = {}) {
 			lon: Number(stop.lon),
 			modes,
 			lines: stationLines(stop),
+			zone: stationZone(stop),
 			stopType: stop.stopType ?? null
 		};
 		const key = name.toLowerCase();
@@ -106,7 +112,7 @@ async function findNearbyStations(origin, options = {}) {
 			continue;
 		}
 		const closer = candidate.distanceMetres < existing.distanceMetres;
-		const richer = !existing.modes.length && candidate.modes.length || !existing.lines.length && candidate.lines.length;
+		const richer = !existing.modes.length && candidate.modes.length || !existing.lines.length && candidate.lines.length || !existing.zone && candidate.zone;
 		if (closer || candidate.distanceMetres === existing.distanceMetres && richer) unique.set(key, candidate);
 	}
 	return [...unique.values()].sort((a, b) => a.distanceMetres - b.distanceMetres);

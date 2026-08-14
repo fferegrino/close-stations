@@ -13,7 +13,7 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
-import { metresToMiles } from '../api/tfl'
+import { formatZone, metresToMiles } from '../api/tfl'
 import { lineColor, lineTextColor } from '../lineColors'
 import CatchmentLayer from './CatchmentLayer'
 import type {
@@ -157,6 +157,7 @@ export default function MapView({
         const route = routes.get(station.id)
         const selected = station.id === selectedStationId
         const color = stationColor(station, selected)
+        const zoneLabel = formatZone(station.zone)
         return (
           <CircleMarker
             key={station.id}
@@ -175,6 +176,12 @@ export default function MapView({
             <Popup>
               <strong>{station.name}</strong>
               <br />
+              {zoneLabel && (
+                <>
+                  {zoneLabel}
+                  <br />
+                </>
+              )}
               {metresToMiles(station.distanceMetres).toFixed(2)} mi away
               {route && (
                 <>

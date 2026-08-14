@@ -18,6 +18,8 @@ export interface Station extends LatLon {
   modes: string[]
   /** Lines serving this station */
   lines: StationLine[]
+  /** Travelcard fare zone from TfL, e.g. "1" or "2/3" */
+  zone?: string | null
   /** TfL stop type when available */
   stopType?: string | null
 }

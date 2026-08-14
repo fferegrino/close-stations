@@ -4,6 +4,7 @@
  */
 export {
   findNearbyStations,
+  formatZone,
   getWalkingRoute,
   getWalkingRoutes,
   metresToMiles,

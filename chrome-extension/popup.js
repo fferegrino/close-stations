@@ -117,6 +117,11 @@ function formatMetres(m) {
   return `${(m / 1000).toFixed(1)} km`;
 }
 
+function formatZone(zone) {
+  const value = typeof zone === "string" ? zone.trim() : "";
+  return value ? `Zone ${value}` : null;
+}
+
 function sameCoords(a, b) {
   if (!a || !b) return false;
   return (
@@ -171,6 +176,14 @@ function renderStations(stations) {
 
     top.append(name, walk);
     li.append(top);
+
+    const zoneLabel = formatZone(station.zone);
+    if (zoneLabel) {
+      const zone = document.createElement("div");
+      zone.className = "station-zone";
+      zone.textContent = zoneLabel;
+      li.append(zone);
+    }
 
     if (station.lines?.length) {
       const lines = document.createElement("div");

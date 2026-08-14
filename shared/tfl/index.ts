@@ -5,7 +5,13 @@ export {
   TFL_BASE,
 } from './constants'
 export { tflGet } from './client'
-export { findNearbyStations, metresToMiles, stationLines } from './stations'
+export {
+  findNearbyStations,
+  formatZone,
+  metresToMiles,
+  stationLines,
+  stationZone,
+} from './stations'
 export {
   getWalkingRoute,
   getWalkingRoutes,

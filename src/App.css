@@ -357,6 +357,11 @@
   color: var(--text);
 }
 
+.station-zone {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
 .station-lines {
   display: flex;
   flex-wrap: wrap;

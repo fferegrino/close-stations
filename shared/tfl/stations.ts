@@ -15,6 +15,11 @@ interface TflLineModeGroup {
   lineIdentifier?: string[]
 }
 
+interface TflAdditionalProperty {
+  key?: string
+  value?: string
+}
+
 interface TflStopPoint {
   id?: string
   naptanId?: string
@@ -25,6 +30,7 @@ interface TflStopPoint {
   modes?: string[]
   lines?: TflLineRef[]
   lineModeGroups?: TflLineModeGroup[]
+  additionalProperties?: TflAdditionalProperty[]
   stopType?: string
 }
 
@@ -34,6 +40,16 @@ interface TflStopPointResponse {
 
 function titleCaseId(id: string): string {
   return id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+/** Travelcard zone from StopPoint additionalProperties, if present. */
+export function stationZone(stop: TflStopPoint): string | null {
+  for (const prop of stop.additionalProperties ?? []) {
+    if (prop?.key === 'Zone' && prop.value?.trim()) {
+      return prop.value.trim()
+    }
+  }
+  return null
 }
 
 /** Prefer non-bus lineModeGroups; fall back to the raw lines list. */
@@ -131,6 +147,7 @@ export async function findNearbyStations(
       lon: Number(stop.lon),
       modes,
       lines: stationLines(stop),
+      zone: stationZone(stop),
       stopType: stop.stopType ?? null,
     }
 
@@ -144,7 +161,8 @@ export async function findNearbyStations(
     const closer = candidate.distanceMetres < existing.distanceMetres
     const richer =
       (!existing.modes.length && candidate.modes.length) ||
-      (!existing.lines.length && candidate.lines.length)
+      (!existing.lines.length && candidate.lines.length) ||
+      (!existing.zone && candidate.zone)
     if (closer || (candidate.distanceMetres === existing.distanceMetres && richer)) {
       unique.set(key, candidate)
     }
@@ -157,4 +175,11 @@ export async function findNearbyStations(
 
 export function metresToMiles(metres: number): number {
   return metres / 1609.344
+}
+
+/** Human-readable fare zone label, e.g. "Zone 1" or "Zone 2/3". */
+export function formatZone(zone: string | null | undefined): string | null {
+  const value = zone?.trim()
+  if (!value) return null
+  return `Zone ${value}`
 }
