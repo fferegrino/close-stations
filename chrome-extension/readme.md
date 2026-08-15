@@ -13,6 +13,10 @@ From the repo root:
 npm run pack:extension
 ```
 
+Bump `"version"` in `manifest.json` whenever the shipped extension changes.
+`npm run pack:extension` refuses to zip a version that already has an
+`extension-v*` git tag (on another commit) or a GitHub Actions artifact.
+
 That writes `close-stations-extension-<version>.zip` with **`manifest.json` at the
 zip root**. Upload that file in the
 [Chrome Developer Dashboard](https://chrome.google.com/webstore/devconsole).

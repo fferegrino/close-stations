@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "build:extension": "vite build --config vite.extension.config.ts",
     "pack:extension": "npm run build:extension && node scripts/pack-extension.mjs",
+    "check:extension-version": "node scripts/extension-version.mjs released",
     "lint": "oxlint",
     "preview": "vite preview"
   },

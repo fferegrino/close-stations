@@ -6,17 +6,24 @@
  * The zip has manifest.json at the root (required by the Chrome Web Store).
  */
 import { execFileSync } from 'node:child_process'
-import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { copyFileSync, cpSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  assertVersionNotReleased,
+  readManifestVersion,
+} from './extension-version.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const extDir = path.join(root, 'chrome-extension')
-const manifest = JSON.parse(
-  readFileSync(path.join(extDir, 'manifest.json'), 'utf8'),
-)
-const version = manifest.version
+const version = readManifestVersion()
+try {
+  assertVersionNotReleased(version)
+} catch (err) {
+  console.error(err instanceof Error ? err.message : err)
+  process.exit(1)
+}
 const zipName = `close-stations-extension-${version}.zip`
 const zipPath = path.join(root, zipName)
 const stage = path.join(tmpdir(), `close-stations-ext-${version}-${process.pid}`)
